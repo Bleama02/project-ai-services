@@ -204,6 +204,8 @@ async def validate_pdf_files(
 )
 async def digitize_document(
     background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    operation: types.OperationType = Query(types.OperationType.INGESTION),
     files: List[UploadFile] = File(..., description="PDF files to process (multiple for ingestion, single for digitization)"),
     operation: types.OperationType = Query(
         types.OperationType.INGESTION,
@@ -212,7 +214,8 @@ async def digitize_document(
     output_format: types.OutputFormat = Query(
         types.OutputFormat.JSON,
         description="Output format for digitization: 'json', 'md', or 'txt' (only applies to digitization operation)"
-    )
+    ),
+    job_name: Optional[str] = Query(None, description="Optional human-readable name for the job")
 ):
     try:
         # 1. Early exit if no files submitted
@@ -240,7 +243,7 @@ async def digitize_document(
             # Upload the file byte stream to files in staging directory
             # files are written to disk here before creating background task to avoid OOM crashes in the thread. Useful for retrying the ingestion if background task crashes
             await dg_util.stage_upload_files(job_id, filenames, str(config.STAGING_DIR / job_id), file_contents)
-            doc_id_dict = dg_util.initialize_job_state(job_id, operation, output_format, filenames)
+            doc_id_dict = dg_util.initialize_job_state(job_id, operation, output_format, filenames, job_name)
             if operation == types.OperationType.INGESTION:
                 background_tasks.add_task(ingest_documents, job_id, filenames, doc_id_dict)
             else:

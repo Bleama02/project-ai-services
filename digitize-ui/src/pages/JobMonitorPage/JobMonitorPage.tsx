@@ -341,7 +341,8 @@ const JobMonitorPage = () => {
   const handleIngestSubmit = async (
     operation: string,
     outputFormat: string,
-    files: File[]
+    files: File[],
+    jobName: string
   ) => {
     try {
       dispatch({
@@ -354,7 +355,7 @@ const JobMonitorPage = () => {
         },
       });
 
-      const response = await uploadDocuments(files, operation, outputFormat);
+      const response = await uploadDocuments(files, operation, outputFormat, jobName);
 
       dispatch({
         type: 'SET_UPLOAD_STATUS',
@@ -373,7 +374,23 @@ const JobMonitorPage = () => {
       }, 3000);
     } catch (error: any) {
       console.error('Error uploading documents:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'An error occurred';
+      
+      // Handle FastAPI validation errors (422) which return detail as an array
+      let errorMessage = 'An error occurred';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          // FastAPI validation error format
+          errorMessage = detail.map((err: any) => err.msg || JSON.stringify(err)).join(', ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       dispatch({
         type: 'SET_UPLOAD_STATUS',
         payload: {
@@ -414,9 +431,15 @@ const JobMonitorPage = () => {
   };
 
   const getJobName = (job: Job) => {
+    // First priority: use job_name if available
+    if (job.job_name) {
+      return job.job_name;
+    }
+    // Fallback: use first document name if available
     if (job.documents && job.documents.length > 0) {
       return job.documents[0].name || job.job_id;
     }
+    // Last resort: use job_id
     return job.job_id;
   };
 
