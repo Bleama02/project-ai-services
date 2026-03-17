@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 
-	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/project-ai-services/ai-services/assets"
 	"github.com/project-ai-services/ai-services/internal/pkg/cli/templates"
 	"github.com/project-ai-services/ai-services/internal/pkg/constants"
@@ -15,13 +13,12 @@ import (
 	"github.com/project-ai-services/ai-services/internal/pkg/runtime/openshift"
 	"github.com/project-ai-services/ai-services/internal/pkg/runtime/types"
 	"github.com/project-ai-services/ai-services/internal/pkg/spinner"
+	"github.com/project-ai-services/ai-services/internal/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -51,22 +48,11 @@ func (o *OpenshiftBootstrap) Configure() error {
 	s.Stop("Configurations applied successfully")
 
 	// 2. Apply operators (namespaces, operatorgroups, subscriptions)
-	s = spinner.New("Applying operator configurations")
-	s.Start(client.Ctx)
-
 	if err := applyYamlsFromFolder(client, operatorFolder); err != nil {
-		s.Fail("failed to apply operator configurations")
-
 		return fmt.Errorf("error occurred while applying operator configurations: %w", err)
 	}
-	s.Stop("Operator configurations applied successfully")
 
-	// 3. Wait for all operators to be ready
-	if err := waitForAllOperators(client); err != nil {
-		return err
-	}
-
-	// 4. Apply operands (CRs) - Does SpyreClusterPolicy configure + applying operand yamls
+	// 3. Apply operands (CRs) - Does SpyreClusterPolicy configure + applying operand yamls
 	s = spinner.New("Applying operand configurations")
 	s.Start(client.Ctx)
 
@@ -83,29 +69,12 @@ func (o *OpenshiftBootstrap) Configure() error {
 	}
 	s.Stop("Operand configurations applied successfully")
 
-	// 5. Wait for all CRs to be ready
+	// 4. Wait for all CRs to be ready
 	if err := waitForAllCRs(client); err != nil {
 		return err
 	}
 
 	logger.Infoln("Cluster configured successfully")
-
-	return nil
-}
-
-func waitForAllOperators(client *openshift.OpenshiftClient) error {
-	for _, op := range constants.RequiredOperators {
-		s := spinner.New(fmt.Sprintf("Waiting for %s to be ready", op.Label))
-		s.Start(client.Ctx)
-
-		err := waitForOperator(client, op.Name, op.Namespace)
-		if err != nil {
-			s.Fail(fmt.Sprintf("%s not ready", op.Label))
-
-			return fmt.Errorf("%s not ready: %w", op.Label, err)
-		}
-		s.Stop(fmt.Sprintf("  %s up and ready", op.Label))
-	}
 
 	return nil
 }
@@ -121,31 +90,31 @@ func waitForAllCRs(client *openshift.OpenshiftClient) error {
 
 		return fmt.Errorf("SpyreClusterPolicy not ready: %w", err)
 	}
-	s.Stop("  SpyreClusterPolicy is ready")
+	s.Stop("SpyreClusterPolicy is ready")
 
 	// Wait for DSCInitialization
 	s = spinner.New("Waiting for DSCInitialization to be ready")
 	s.Start(client.Ctx)
 
-	err = waitForRHODSResource(client, "DSCInitialization", "default-dsci")
+	err = waitForRHODSResource(client, "DSCInitialization")
 	if err != nil {
 		s.Fail("DSCInitialization not ready")
 
 		return fmt.Errorf("DSCInitialization not ready: %w", err)
 	}
-	s.Stop("  DSCInitialization is ready")
+	s.Stop("DSCInitialization is ready")
 
 	// Wait for DataScienceCluster
 	s = spinner.New("Waiting for DataScienceCluster to be ready")
 	s.Start(client.Ctx)
 
-	err = waitForRHODSResource(client, "DataScienceCluster", "default-dsc")
+	err = waitForRHODSResource(client, "DataScienceCluster")
 	if err != nil {
 		s.Fail("DataScienceCluster not ready")
 
 		return fmt.Errorf("DataScienceCluster not ready: %w", err)
 	}
-	s.Stop("  DataScienceCluster is ready")
+	s.Stop("DataScienceCluster is ready")
 
 	return nil
 }
@@ -160,15 +129,6 @@ func applyYamlsFromFolder(client *openshift.OpenshiftClient, folder string) erro
 	yamls, err := tp.LoadYamls()
 	if err != nil {
 		return fmt.Errorf("error loading yamls from %s: %w", folder, err)
-	}
-
-	switch folder {
-	case operandFolder:
-		// For operands, check if single instance resource already exist and update existing ones
-		yamls, err = handleExistingOperands(client, yamls)
-		if err != nil {
-			return fmt.Errorf("error handling existing operands: %w", err)
-		}
 	}
 
 	for _, yaml := range yamls {
@@ -211,7 +171,7 @@ func fetchSCPSpec(client *openshift.OpenshiftClient) (map[string]any, error) {
 		}
 	}
 
-	csv, err := fetchOperator(client, spyreOp.Name, spyreOp.Namespace)
+	csv, err := fetchOperatorByPackage(client, spyreOp.Name, spyreOp.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching spyre operator: %w", err)
 	}
@@ -298,52 +258,6 @@ func frameAndApply(client *openshift.OpenshiftClient, spec map[string]any, s *sp
 	return err
 }
 
-func fetchOperator(client *openshift.OpenshiftClient, opName string, opNS string) (*operatorsv1alpha1.ClusterServiceVersion, error) {
-	sub := &operatorsv1alpha1.Subscription{}
-	if err := client.Client.Get(client.Ctx, k8sClient.ObjectKey{
-		Name:      opName,
-		Namespace: opNS,
-	}, sub); err != nil {
-		return nil, err
-	}
-
-	// Use installedCSV from status instead of startingCSV from spec
-	if sub.Status.InstalledCSV == "" {
-		return nil, apierrors.NewNotFound(operatorsv1alpha1.Resource("clusterserviceversion"), "")
-	}
-
-	csv := &operatorsv1alpha1.ClusterServiceVersion{}
-	if err := client.Client.Get(client.Ctx, k8sClient.ObjectKey{
-		Name:      sub.Status.InstalledCSV,
-		Namespace: opNS,
-	}, csv); err != nil {
-		return nil, err
-	}
-
-	return csv, nil
-}
-
-func waitForOperator(client *openshift.OpenshiftClient, opName string, opNS string) error {
-	return wait.PollUntilContextTimeout(client.Ctx, constants.OperatorPollInterval, constants.OperatorPollTimeout, true, func(ctx context.Context) (bool, error) {
-		csv, err := fetchOperator(client, opName, opNS)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// keep waiting until timeout
-				return false, nil
-			}
-
-			return false, err
-		}
-		// found
-		if csv.Status.Phase == operatorsv1alpha1.CSVPhaseSucceeded {
-			return true, nil
-		}
-
-		return false, nil
-	},
-	)
-}
-
 func waitForSpyreClusterPolicy(client *openshift.OpenshiftClient) error {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{
@@ -381,119 +295,27 @@ func waitForSpyreClusterPolicy(client *openshift.OpenshiftClient) error {
 	})
 }
 
-// handleExistingOperands checks if single instance resources already exist and update existing one's name.
-func handleExistingOperands(client *openshift.OpenshiftClient, yamls [][]byte) ([][]byte, error) {
-	resources := []string{
-		"DSCInitialization", "DataScienceCluster",
-	}
-
-	existingResources := make(map[string]string)
-	for _, kind := range resources {
-		if name, exists, err := getExistingResourceName(client, kind); err != nil {
-			return nil, fmt.Errorf("error checking for existing %s: %w", kind, err)
-		} else if exists {
-			existingResources[kind] = name
-			logger.Infof("\nFound existing %s named '%s'", kind, name, logger.VerbosityLevelDebug)
-		}
-	}
-
-	updatedYamls := make([][]byte, 0, len(yamls))
-
-	for _, yamlBytes := range yamls {
-		updatedYaml, err := updateRHODSResourceNames(yamlBytes, existingResources, resources)
-		if err != nil {
-			return nil, err
-		}
-		// Skip nil YAMLs (resources that should not be applied)
-		if updatedYaml != nil {
-			updatedYamls = append(updatedYamls, updatedYaml)
-		}
-	}
-
-	return updatedYamls, nil
-}
-
-// updateRHODSResourceNames checks if single instance resources exist and updates their names in the YAML.
-func updateRHODSResourceNames(yamlBytes []byte, existingResources map[string]string, resources []string) ([]byte, error) {
-	obj := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal(yamlBytes, obj); err != nil {
-		// return nil here as file can be multi-resource YAML
-		return yamlBytes, nil
-	}
-
-	kind := obj.GetKind()
-	if !slices.Contains(resources, kind) {
-		// resource is not single instance, we skip it
-		return yamlBytes, nil
-	}
-
-	existingName, exists := existingResources[kind]
-	if !exists {
-		// resource does not exist, we create it
-		return yamlBytes, nil
-	}
-
-	annotations := obj.GetAnnotations()
-	if annotations != nil {
-		if reApply, ok := annotations["ai-services.io/re-apply"]; ok && reApply == "false" {
-			// we skip resources which have re-apply annotation set to false
-			return nil, nil
-		}
-	}
-
-	obj.SetName(existingName)
-	updatedYaml, err := yaml.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedYaml, nil
-}
-
-// getExistingResourceName checks if a single instance resource exists and returns its name.
-func getExistingResourceName(client *openshift.OpenshiftClient, kind string) (string, bool, error) {
-	list := &unstructured.UnstructuredList{}
-	list.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   strings.ToLower(kind) + ".opendatahub.io",
-		Version: "v2",
-		Kind:    kind,
-	})
-
-	if err := client.Client.List(client.Ctx, list); err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", false, nil
-		}
-
-		return "", false, fmt.Errorf("error listing %s: %w", kind, err)
-	}
-
-	if len(list.Items) == 0 {
-		return "", false, nil
-	}
-
-	return list.Items[0].GetName(), true, nil
-}
-
-func waitForRHODSResource(client *openshift.OpenshiftClient, kind, name string) error {
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   strings.ToLower(kind) + ".opendatahub.io",
-		Version: "v2",
-		Kind:    kind,
-	})
-
+func waitForRHODSResource(client *openshift.OpenshiftClient, kind string) error {
 	return wait.PollUntilContextTimeout(client.Ctx, constants.OperatorPollInterval, constants.OperatorPollTimeout, true, func(ctx context.Context) (bool, error) {
-		if err := client.Client.Get(ctx, k8stypes.NamespacedName{Name: name}, obj); err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Infof("%s not found yet, waiting...", kind, logger.VerbosityLevelDebug)
-
-				return false, nil
-			}
-
+		// Get the existing resource from the cluster
+		gvk := schema.GroupVersionKind{
+			Group:   strings.ToLower(kind) + ".opendatahub.io",
+			Version: constants.VersionV2,
+			Kind:    kind,
+		}
+		resource, exists, err := utils.GetExistingCustomResource(client, gvk)
+		if err != nil {
 			return false, fmt.Errorf("failed to get %s: %w", kind, err)
 		}
 
-		phase, found, err := unstructured.NestedString(obj.Object, "status", "phase")
+		if !exists {
+			logger.Infof("%s not found yet, waiting...", kind, logger.VerbosityLevelDebug)
+
+			return false, nil
+		}
+
+		// Check the status.phase of the resource
+		phase, found, err := unstructured.NestedString(resource.Object, "status", "phase")
 		if err != nil {
 			return false, fmt.Errorf("failed to parse status.phase: %w", err)
 		}
