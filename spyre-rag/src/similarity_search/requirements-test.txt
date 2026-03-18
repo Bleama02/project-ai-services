@@ -1,0 +1,19 @@
+# Testing dependencies for similarity search unit tests
+
+# Core testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# For testing FastAPI applications
+httpx>=0.24.0
+
+# Optional: For test coverage reports
+pytest-cov>=4.1.0
+
+# Optional: For parallel test execution
+pytest-xdist>=3.3.0
+
+# FastAPI and dependencies (if not already installed)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
