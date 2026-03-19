@@ -30,11 +30,11 @@ func BootstrapCmd() *cobra.Command {
 			}
 
 			if configureErr := bootstrapInstance.Configure(); configureErr != nil {
-				return fmt.Errorf("failed to bootstrap the LPAR: %w", configureErr)
+				return fmt.Errorf("failed to run bootstrap configure: %w", configureErr)
 			}
 
 			if err := factory.Validate(nil); err != nil {
-				return fmt.Errorf("failed to bootstrap the LPAR: %w", err)
+				return fmt.Errorf("failed to run bootstrap validate: %w", err)
 			}
 
 			if rt == types.RuntimeTypePodman {
@@ -76,19 +76,23 @@ to run AI Services, ensuring prerequisites are met and initial configuration is 
 Available subcommands:
 
 Configure - Configure performs below actions
- - For Podman:
-   - Installs podman on host if not installed
-   - Runs servicereport tool to configure required spyre cards
-   - Initializes the AI Services infrastructure
+- For Podman:
+ - Installs podman on host if not installed
+ - Runs servicereport tool to configure required spyre cards
+ - Initializes the AI Services infrastructure
 
- - For OpenShift:
-   - Installs machine config, and dependant operators
-   - Installs and configures SpyreClusterPolicy	
+- For OpenShift:
+ - Applies required machine configs for Spyre operator
+ - Installs required operators and operands
+ - Creates and configures SpyreClusterPolicy
+ - Creates DSCInitialization if it does not exist
+ - Creates or updates DataScienceCluster with kserve enabled
+ - Waits for all required components to become ready
 
 Validate - Checks below system prerequisites:
 - For Podman:
 %s
 
-- For Openshift:
+- For OpenShift:
 %s`, podmanList, openshiftList)
 }

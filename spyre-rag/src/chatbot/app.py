@@ -10,9 +10,24 @@ import json
 from contextlib import asynccontextmanager
 from asyncio import BoundedSemaphore
 from functools import wraps
+import uvicorn
+from starlette.concurrency import iterate_in_threadpool
+from lingua import Language
+
+from common.misc_utils import set_log_level
+log_level = logging.INFO
+level = os.getenv("LOG_LEVEL", "").removeprefix("--").lower()
+if level != "":
+    if "debug" in level:
+        log_level = logging.DEBUG
+    elif not "info" in level:
+        logging.warning(f"Unknown LOG_LEVEL passed: '{level}', using default INFO level")
+
+set_log_level(log_level)
+
 import common.db_utils as db
 from common.lang_utils import setup_language_detector, detect_language, lang_de, max_tokens_map
-from common.misc_utils import get_model_endpoints, set_log_level, set_request_id
+from common.misc_utils import get_model_endpoints, set_request_id
 from common.llm_utils import create_llm_session, query_vllm_stream, query_vllm_non_stream, query_vllm_models
 from common.settings import get_settings
 from common.perf_utils import perf_registry
@@ -29,18 +44,6 @@ from chatbot.response_utils import (
     ModelsResponse,
     PerfMetricsResponse,
 )
-import uvicorn
-from starlette.concurrency import iterate_in_threadpool
-from lingua import Language
-
-log_level = logging.INFO
-level = os.getenv("LOG_LEVEL", "").removeprefix("--").lower()
-if level != "":
-    if "debug" in level:
-        log_level = logging.DEBUG
-    elif not "info" in level:
-        logging.warning(f"Unknown LOG_LEVEL passed: '{level}', using default INFO level")
-set_log_level(log_level)
 
 vectorstore = None
 # Globals to be set dynamically
@@ -233,7 +236,32 @@ async def locked_stream(stream_g, perf_stat_dict):
     response_model=ChatCompletionResponse,
     tags=["chat"],
     summary="Chat with RAG",
-    description="Generate chat completions grounded in retrieved documents. Returns streaming response if stream=true, otherwise returns structured JSON."
+    description="Generate chat completions grounded in retrieved documents. Returns streaming response if stream=true, otherwise returns structured JSON.",
+    responses={
+        200: {
+            "description": "Successful Response",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "choices": [
+                            {
+                                "message": {
+                                    "content": "Based on the retrieved documents, artificial intelligence..."
+                                }
+                            }
+                        ]
+                    }
+                },
+                "text/event-stream": {
+                    "schema": {
+                        "type": "string",
+                        "description": "Server-Sent Events stream. Each event is formatted as: data: {JSON}\\n\\n"
+                    },
+                    "example": 'data: {"choices":[{"delta":{"content":"Based on"}}]}\n\ndata: {"choices":[{"delta":{"content":" the retrieved"}}]}\n\ndata: {"choices":[{"delta":{"content":" documents..."}}]}\n\n'
+                }
+            }
+        }
+    }
 )
 async def chat_completion(req: ChatCompletionRequest) -> ChatCompletionResponse | StreamingResponse:
     if not req.messages:

@@ -12,10 +12,20 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.concurrency import iterate_in_threadpool
 
+from common.misc_utils import set_log_level, get_logger
+log_level = logging.INFO
+level = os.getenv("LOG_LEVEL", "").removeprefix("--").lower()
+if level != "":
+    if "debug" in level:
+        log_level = logging.DEBUG
+    elif not "info" in level:
+        logging.warning(f"Unknown LOG_LEVEL passed: '{level}'")
+
+set_log_level(log_level)
+
 from common.llm_utils import create_llm_session, query_vllm_summarize, query_vllm_summarize_stream
-from common.misc_utils import get_model_endpoints
+from common.misc_utils import get_model_endpoints, set_request_id
 from common.settings import get_settings
-from common.misc_utils import set_log_level, get_logger, set_request_id
 from summarize.summ_utils import (
     SummarizeException,
     word_count,
@@ -30,14 +40,6 @@ from summarize.summ_utils import (
     extract_text_from_pdf
 )
 
-log_level = logging.INFO
-level = os.getenv("LOG_LEVEL", "").removeprefix("--").lower()
-if level != "":
-    if "debug" in level:
-        log_level = logging.DEBUG
-    elif not "info" in level:
-        logging.warning(f"Unknown LOG_LEVEL passed: '{level}'")
-set_log_level(log_level)
 logger = get_logger("app")
 
 settings = get_settings()
@@ -289,16 +291,15 @@ async def summarize(request: Request):
                         logger.debug(f"PDF extraction took {(time.time() - start) * 1000:.0f}ms")
                     except Exception as e:
                         logger.error(f"PDF extraction failed: {e}")
-                        raise SummarizeException(400, "PDF_EXTRACTION_ERROR",
-                                                 "Failed to extract text from PDF file.")
+                        raise SummarizeException(415, "UNSUPPORTED_CONTENT_TYPE",
+                                                 "File is not a valid txt/pdf file.")
                 else:
                     try:
                         content_text = raw.decode("utf-8", errors="strict")
                     except UnicodeDecodeError as e:
                         logger.error(f"Failed to decode text file as UTF-8: {e}")
                         raise SummarizeException(415, "UNSUPPORTED_CONTENT_TYPE",
-                                                 "File is not a valid UTF-8 text file. It may be a binary "
-                                                 "file with renamed extension.")
+                                                 "File is not a valid txt/pdf file.")
             else:
                 raise SummarizeException(400, "MISSING_INPUT",
                                          "Either 'text' or 'file' parameter is required")
