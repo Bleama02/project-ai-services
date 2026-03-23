@@ -24,10 +24,10 @@ class Document(BaseModel):
 
 
 class SimilaritySearchResult(BaseModel):
-    """Individual search result with document and score"""
-    document: Document = Field(..., description="Retrieved document chunk")
+    """Similarity Search result with document and score"""
+    document: Document = Field(..., description="Retrieved document chunk id")
     score: float = Field(..., description="Similarity or relevance score")
-    rank: int = Field(..., description="Rank position in results (1-based)")
+    rank: int = Field(..., description="Rank position in results")
 
 
 class SimilaritySearchResponse(BaseModel):
