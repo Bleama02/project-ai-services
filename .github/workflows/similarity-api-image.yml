@@ -1,0 +1,57 @@
+name: Similarity API
+
+on:
+  push:
+    paths:
+      - 'spyre-rag/src/similarity/**'
+      - 'spyre-rag/src/common/**'
+    branches:
+      - main
+
+env:
+  ICR_REGISTRY: icr.io
+  ICR_NAMESPACE: ai-services-cicd
+
+jobs:
+  build-publish-image:
+    name: Build and Publish Similarity API Image
+    runs-on: ubuntu-24.04-ppc64le
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      
+      - name: Build similarity-api image
+        working-directory: spyre-rag/src
+        run: |
+          # Build the similarity API image
+          podman build -t similarity-api:latest \
+            -f Containerfile \
+            --build-arg SERVICE=similarity \
+            .
+          
+          # Tag for registry
+          podman tag similarity-api:latest \
+            ${{ env.ICR_REGISTRY }}/${{ env.ICR_NAMESPACE }}/similarity-api:latest
+
+      - name: Login to IBM Cloud Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.ICR_APIKEY }}" | podman login -u ${{ secrets.ICR_USERNAME }} --password-stdin ${{ env.ICR_REGISTRY }}
+
+      - name: Publish similarity-api image
+        working-directory: spyre-rag/src
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          podman push ${{ env.ICR_REGISTRY }}/${{ env.ICR_NAMESPACE }}/similarity-api:latest
+
+  scan:
+    uses: ./.github/workflows/scanner.yml
+    with:
+      path: 'spyre-rag/src/similarity'
+      image: 'similarity-api'
+    secrets:
+      ICR_USERNAME: ${{ secrets.ICR_USERNAME }}
+      ICR_APIKEY: ${{ secrets.ICR_APIKEY }}
+
+# Made with Bob
