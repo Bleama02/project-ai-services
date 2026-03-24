@@ -21,9 +21,9 @@ if level != "":
 
 set_log_level(log_level)
 
-from common.misc_utils import get_model_endpoints, set_request_id
-from common.settings import get_settings
-import common.db_utils as db
+from common.misc_utils import get_model_endpoints, set_request_id #differnt
+from common.settings import get_settings 
+import common.db_utils as db #diffetnt
 from similarity.similarity_utils import (
     SimilarityException,
     SimilaritySearchRequest,
@@ -107,6 +107,7 @@ def swagger_root():
         title="AI-Services Similarity Search API - Swagger UI",
     )
 
+ALLOWED_FILE_EXTENSIONS = {".txt", ".pdf"}
 
 @app.exception_handler(SimilarityException)
 async def similarity_exception_handler(request: Request, exc: SimilarityException):
@@ -124,22 +125,12 @@ async def similarity_exception_handler(request: Request, exc: SimilarityExceptio
 
 
 async def handle_similarity_search(
-    query: str,
-    top_k: int,
-    rerank: bool = False,
+    query: str,     #Search query string
+    top_k: int,     #Number of results to return
+    rerank: bool = False,  #Whether to apply reranking
 ):
-    """
-    Core similarity search logic.
     
-    Args:
-        query: Search query string
-        top_k: Number of results to return
-        rerank: Whether to apply reranking
-        
-    Returns:
-        SimilaritySearchResponse with results
-    """
-    # Get model configurations
+    # Model configurations
     emb_model = emb_model_dict['emb_model']
     emb_endpoint = emb_model_dict['emb_endpoint']
     emb_max_tokens = emb_model_dict['max_tokens']
@@ -209,7 +200,7 @@ async def handle_similarity_search(
         processing_time_ms=elapsed_ms
     )
 
-    return SimilaritySearchResponse(**response_data)
+    return SimilaritySearchResponse(**response_data) #results 
 
 
 @app.post(
@@ -218,36 +209,13 @@ async def handle_similarity_search(
     responses=error_responses,
     summary="Similarity Search",
     description=(
-        "Performs vector similarity search using dense k-NN (cosine similarity) "
-        "with optional Cohere-based reranking.\n\n"
-        "### Request Parameters\n\n"
-        "| Field | Type | Required | Default | Description |\n"
-        "|-------|------|----------|---------|-------------|\n"
-        "| `query` | string | Yes | - | Natural language search query |\n"
-        "| `top_k` | integer | No | 10 | Number of results to return (1-100) |\n"
-        "| `rerank` | boolean | No | false | Apply Cohere reranker to re-score results |\n\n"
-        "### Response\n\n"
-        "Returns documents ranked by similarity score (cosine) or relevance score (if reranked).\n\n"
-        "**Example Request:**\n"
-        "```bash\n"
-        'curl -X POST /v1/similarity-search -H "Content-Type: application/json" -d \'{\n'
-        '  "query": "How do I configure network settings?",\n'
-        '  "top_k": 5,\n'
-        '  "rerank": false\n'
-        "}\'\n"
-        "```"
+        "Performs vector similarity search using dense k-NN (cosine similarity) with optional Cohere-based reranking."
     ),
     response_description="Similarity search results with scores and metadata.",
     tags=["similarity"],
 )
 async def similarity_search(request: Request, req: SimilaritySearchRequest):
-    """
-    Perform vector similarity search with optional reranking.
-    
-    - **query**: Natural language search query (required)
-    - **top_k**: Number of results to return (default: 10, range: 1-100)
-    - **rerank**: Apply reranking for better relevance (default: false)
-    """
+    """Perform vector similarity search with optional reranking."""
     try:
         # Check if server is busy
         if concurrency_limiter.locked():
@@ -310,4 +278,3 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
-# Made with Bob

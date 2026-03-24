@@ -57,29 +57,15 @@ def validate_query_length(query: str, emb_endpoint: str) -> Tuple[bool, Optional
 
 
 def retrieve_documents(
-    query: str,
-    emb_model: str,
-    emb_endpoint: str,
-    max_tokens: int,
-    vectorstore,
-    top_k: int,
-    mode: str = "dense"
+    query: str,          # The search query
+    emb_model: str,      # Embedding model name
+    emb_endpoint: str,   # Embedding endpoint URL
+    max_tokens: int,     # Maximum tokens for embedding
+    vectorstore,        # Vector store instance    
+    top_k: int,        # Number of results to return
+    mode: str = "dense"  # Search mode ("dense" for k-NN similarity)
 ) -> Tuple[List[dict], List[float]]:
-    """
-    Retrieve documents using vector similarity search.
     
-    Args:
-        query: Search query
-        emb_model: Embedding model name
-        emb_endpoint: Embedding endpoint URL
-        max_tokens: Maximum tokens for embedding
-        vectorstore: Vector store instance
-        top_k: Number of results to return
-        mode: Search mode ("dense" for k-NN similarity)
-        
-    Returns:
-        Tuple of (documents, scores)
-    """
     embedding = get_embedder(emb_model, emb_endpoint, max_tokens)
     results = vectorstore.search(query, embedding=embedding, top_k=top_k, mode=mode)
 
@@ -100,27 +86,16 @@ def retrieve_documents(
         score = hit.get("score") or hit.get("distance") or 0.0
         scores.append(score)
 
-    return retrieved_documents, scores
+    return retrieved_documents, scores #Returns retrieved documents with there similarity scores
 
 
 def rerank_documents(
     query: str,
-    documents: List[dict],
-    reranker_model: str,
-    reranker_endpoint: str
+    documents: List[dict], #List the documents that need to be reranked
+    reranker_model: str, #Name of the reranker model
+    reranker_endpoint: str #Endpoint URL for the reranker model
 ) -> List[Tuple[dict, float]]:
-    """
-    Rerank documents using Cohere reranker.
-    
-    Args:
-        query: Search query
-        documents: List of documents to rerank
-        reranker_model: Reranker model name
-        reranker_endpoint: Reranker endpoint URL
-        
-    Returns:
-        List of (document, relevance_score) tuples sorted by descending score
-    """
+
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from cohere import ClientV2
     
@@ -158,27 +133,16 @@ def rerank_documents(
                 logger.error(f"Thread error: {e}")
                 reranked.append((doc, 0.0))
     
-    return sorted(reranked, key=lambda x: x[1], reverse=True)
+    return sorted(reranked, key=lambda x: x[1], reverse=True) #Returns a list of documents that are sorted by score.(descending order)
 
 
 def build_success_response(
-    results: List[dict],
-    scores: List[float],
-    score_type: str,
-    processing_time_ms: int
+    results: List[dict],  #A list of retrieved documents
+    scores: List[float],  # A list of the similairty/relevance scrores
+    score_type: str,      #If the score is a cosine similarity or a relevance score
+    processing_time_ms: int #The time it took to process the request in milliseconds
 ) -> dict:
-    """
-    Build a successful similarity search response.
-    
-    Args:
-        results: List of retrieved documents
-        scores: List of similarity/relevance scores
-        score_type: Type of score ("cosine" or "relevance")
-        processing_time_ms: Processing time in milliseconds
-        
-    Returns:
-        Formatted response dictionary
-    """
+   
     formatted_results = []
     for i, (doc, score) in enumerate(zip(results, scores), 1):
         formatted_results.append({
@@ -291,4 +255,4 @@ error_responses: Dict[int | str, Dict[str, Any]] = {
     500: {"description": "Internal server error", "model": SimilarityErrorResponse},
 }
 
-# Made with Bob
+
