@@ -83,18 +83,46 @@ def perform_similarity_search(
     vectorstore,
     top_k: int,
     rerank: bool,
-    mode:str,
+    mode: str,
     reranker_model: Optional[str] = None,
     reranker_endpoint: Optional[str] = None,
-) -> tuple[list[dict], list[float], str]:
+    top_r: Optional[int] = None,
+    score_threshold: Optional[float] = None,
+    track_performance: bool = False,
+) -> tuple[list[dict], list[float], str, Optional[dict]]:
     """
     Run vector similarity search using the specified mode, with optional Cohere reranking.
+
+    Args:
+        query: Search query string
+        emb_model: Embedding model name
+        emb_endpoint: Embedding service endpoint
+        emb_max_tokens: Maximum tokens for embedding
+        vectorstore: Vector database instance
+        top_k: Number of documents to retrieve initially
+        rerank: Whether to apply reranking
+        mode: Search mode ("dense", "sparse", or "hybrid")
+        reranker_model: Reranker model name (required if rerank=True)
+        reranker_endpoint: Reranker service endpoint (required if rerank=True)
+        top_r: Optional limit on number of results after reranking (e.g., 3 for chatbot)
+        score_threshold: Optional minimum score threshold for filtering results
+        track_performance: Whether to track and return performance metrics
 
     Returns:
         docs       - list of document dicts (page_content, filename, type, source, chunk_id)
         scores     - parallel list of float scores
         score_type - "cosine", "bm25", "hybrid", or "relevance" (when reranked)
+        perf_stats - dict with timing metrics if track_performance=True, else None
     """
+    import time
+    
+    perf_stats: Optional[dict] = {} if track_performance else None
+    start_time: float = 0.0
+    
+    # Retrieve documents with optional timing
+    if track_performance and perf_stats is not None:
+        start_time = time.time()
+    
     docs, scores = retrieve_documents(
         query,
         emb_model,
@@ -104,6 +132,9 @@ def perform_similarity_search(
         top_k,
         mode=mode,
     )
+    
+    if track_performance and perf_stats is not None:
+        perf_stats["retrieve_time"] = time.time() - start_time
 
     score_type_map = {
         "dense": "cosine",
@@ -113,9 +144,30 @@ def perform_similarity_search(
     score_type = score_type_map.get(mode, "cosine")
 
     if rerank:
+        # Ensure reranker parameters are provided when reranking is requested
+        if not reranker_model or not reranker_endpoint:
+            raise ValueError("reranker_model and reranker_endpoint are required when rerank=True")
+        
+        if track_performance and perf_stats is not None:
+            start_time = time.time()
+        
         reranked = rerank_documents(query, docs, reranker_model, reranker_endpoint)
+        
+        if track_performance and perf_stats is not None:
+            perf_stats["rerank_time"] = time.time() - start_time
+        
+        # Apply top_r limit if specified
+        if top_r is not None and top_r > 0:
+            reranked = reranked[:top_r]
+        
         docs = [d for d, _ in reranked]
         scores = [s for _, s in reranked]
         score_type = "relevance"
 
-    return docs, scores, score_type
+    # Apply score threshold filter if specified
+    if score_threshold is not None:
+        filtered = [(d, s) for d, s in zip(docs, scores) if s >= score_threshold]
+        docs = [d for d, _ in filtered]
+        scores = [s for _, s in filtered]
+
+    return docs, scores, score_type, perf_stats

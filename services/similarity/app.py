@@ -145,7 +145,7 @@ async def similarity_search(req: SimilaritySearchRequest) -> SimilaritySearchRes
         reranker_model = reranker_model_dict.get("reranker_model") if req.rerank else None
         reranker_endpoint = reranker_model_dict.get("reranker_endpoint") if req.rerank else None
 
-        docs, scores, score_type = await asyncio.to_thread(
+        docs, scores, score_type, _ = await asyncio.to_thread(
             perform_similarity_search,
             req.query,
             emb_model,

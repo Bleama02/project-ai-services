@@ -16,7 +16,8 @@ def mock_dependencies():
          patch('similarity.app.emb_model_dict') as mock_emb, \
          patch('similarity.app.reranker_model_dict') as mock_reranker, \
          patch('similarity.similarity_utils.retrieve_documents') as mock_retrieve, \
-         patch('similarity.similarity_utils.rerank_documents') as mock_rerank:
+         patch('similarity.similarity_utils.rerank_documents') as mock_rerank, \
+         patch('common.validation_utils.validate_query_length') as mock_validate:
         
         # Setup mock returns
         mock_emb.return_value = {
@@ -31,17 +32,21 @@ def mock_dependencies():
         
         # Mock retrieve_documents to return sample data
         mock_retrieve.return_value = (
-            [{"page_content": "test", "filename": "test.pdf", "type": "text", 
+            [{"page_content": "test", "filename": "test.pdf", "type": "text",
               "source": "test.pdf", "chunk_id": "123"}],
             [0.85]
         )
+        
+        # Mock query validation to always pass
+        mock_validate.return_value = (True, None)
         
         yield {
             "vectorstore": mock_vs,
             "emb_model_dict": mock_emb,
             "reranker_model_dict": mock_reranker,
             "retrieve_documents": mock_retrieve,
-            "rerank_documents": mock_rerank
+            "rerank_documents": mock_rerank,
+            "validate_query_length": mock_validate
         }
 
 
