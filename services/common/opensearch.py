@@ -29,6 +29,7 @@ class OpensearchNotReadyError(VectorStoreNotReadyError):
 
 class OpensearchVectorStore(VectorStore):
     def __init__(self):
+        """Initialize the OpenSearch client and create the hybrid search pipeline."""
         logger.debug("Initializing OpensearchVectorStore")
 
         self.host = settings.vector_store.opensearch_host
