@@ -27,12 +27,12 @@ class PerfMetricsRegistry:
                 del self._metrics[next(iter(self._metrics))]  # Remove oldest (FIFO)
 
     def get_metrics(self):
-        """Return all metrics as a list"""
+        """Return all metrics as a list."""
         with self._lock:
             return list(self._metrics.values())
     
     def get_metric_by_request_id(self, request_id):
-        """Return a specific metric by request_id"""
+        """Return a specific metric by request_id."""
         with self._lock:
             return self._metrics.get(request_id)
 

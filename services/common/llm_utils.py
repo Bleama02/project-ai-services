@@ -56,9 +56,9 @@ def tqdm_wrapper(iterable, **kwargs):
 
 @retry_on_transient_error(max_retries=3, initial_delay=1.0, backoff_multiplier=2.0)
 def summarize_and_classify_single_table(prompt, gen_model, llm_endpoint, max_tokens: int = 1024):
-    """
-    Combined function to summarize and classify a table in a single LLM call.
-    Returns tuple: (summary, decision)
+    """Combined function to summarize and classify a table in a single LLM call.
+
+    Returns tuple: (summary, decision).
     """
     if misc_utils.SESSION is None:
         raise RuntimeError("LLM session not initialized. Call create_llm_session() first.")
@@ -118,9 +118,9 @@ def summarize_and_classify_single_table(prompt, gen_model, llm_endpoint, max_tok
         return "No summary.", False
 
 def summarize_and_classify_tables(table_mds, gen_model, llm_endpoint, doc_path, prompt_template: str, max_tokens: int = 1024, max_workers=32):
-    """
-    Combined function to summarize and classify tables using a single prompt.
-    Returns tuple: (summaries, decisions)
+    """Combined function to summarize and classify tables using a single prompt.
+
+    Returns tuple: (summaries, decisions).
     """
     all_prompts = [prompt_template.format(content=md) for md in table_mds]
 
