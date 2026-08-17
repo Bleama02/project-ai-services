@@ -1,4 +1,4 @@
-name: Services Unit Tests
+name: Services Lint & Unit Tests
 
 on:
   pull_request:
