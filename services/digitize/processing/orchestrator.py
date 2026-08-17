@@ -460,7 +460,7 @@ def process_converted_document(converted_json_path, doc_path, out_path, gen_mode
 
 
 def clean_intermediate_files(doc_id, out_path):
-    """Remove intermediate files but keep <doc_id>.json"""
+    """Remove intermediate files but keep <doc_id>.json."""
     for pattern in [f"{doc_id}{text_suffix}", f"{doc_id}{table_suffix}", f"{doc_id}{text_chunk_suffix}", f"{doc_id}{table_chunk_suffix}"]:
         file_path = Path(out_path) / pattern
         if file_path.exists():

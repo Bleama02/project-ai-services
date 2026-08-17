@@ -227,8 +227,7 @@ async def update_connector(connector_id: str, body: ConnectorUpdateRequest):
     response_description="No content — teardown proceeds in the background",
 )
 async def delete_connector(connector_id: str):
-    """
-    Fast, non-blocking DELETE:
+    """Fast, non-blocking DELETE.
 
     Case A — sync_status == 'syncing':
         Mark DELETE_PENDING. The running tick will hit _check_delete_pending at

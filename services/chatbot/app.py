@@ -155,7 +155,7 @@ async def add_request_id(request: Request, call_next):
 
 @app.get("/", include_in_schema=False)
 def swagger_root():
-    """Expose Swagger UI at the root path (/)"""
+    """Expose Swagger UI at the root path (/)."""
     return get_swagger_ui_html(
         openapi_url="/openapi.json",
         title="AI-Services Chatbot API - Swagger UI",

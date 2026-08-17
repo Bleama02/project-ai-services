@@ -210,14 +210,13 @@ async def get_document_content(doc_id: str):
     response_description="No content on successful deletion",
 )
 async def delete_document(doc_id: str):
-    """
-    Delete a single document — follows the 'Always-Clean-VDB' strategy:
+    """Delete a single document — follows the 'Always-Clean-VDB' strategy.
     1. Connector guard  — 404 for connector-sourced docs
     2. Fetch metadata
     3. Active-job guard
     4. VDB cleanup (high priority)
     5. File & metadata cleanup
-    6. Database record removal
+    6. Database record removal.
     """
     try:
         # 1. Connector guard — connector-sourced docs cannot be deleted via this API.
