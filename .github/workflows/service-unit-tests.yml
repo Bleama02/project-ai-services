@@ -35,8 +35,8 @@ jobs:
       - name: Install ruff
         run: pip install ruff
 
-      - name: Lint docstrings (common)
-        run: ruff check common/ --exit-zero
+      - name: Lint docstrings (services)
+        run: ruff check --exit-zero
         working-directory: services
         
       - name: Run all service tests
