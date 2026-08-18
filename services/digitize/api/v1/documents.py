@@ -86,6 +86,10 @@ async def list_documents(
         description="Filter by document name (partial match, case-insensitive)",
     ),
 ):
+    """Retrieve a paginated list of documents matching the specified filters.
+
+    Supports filtering by processing status, filename pattern, and connector source ID.
+    """
     try:
         logger.debug(
             f"Fetching documents with filters: limit={limit}, offset={offset}, "
@@ -145,6 +149,10 @@ async def get_document_metadata(
     doc_id: str,
     details: bool = Query(False, description="Include detailed metadata (pages, tables, timing)"),
 ):
+    """Retrieve detailed metadata of a specific document by its ID.
+
+    Allows optionally including deeper page/table/timing processing metrics.
+    """
     try:
         from digitize.utils.db import get_document, is_connector_sourced_document
 
@@ -178,6 +186,7 @@ async def get_document_metadata(
     response_description="Document content in the specified output format",
 )
 async def get_document_content(doc_id: str):
+    """Retrieve the parsed/extracted textual content of a digitized document by its ID."""
     try:
         return dg_util.get_document_content(doc_id)
     except FileNotFoundError as exc:
@@ -279,6 +288,10 @@ async def delete_document(doc_id: str):
 async def bulk_delete_documents(
     confirm: bool = Query(..., description="Must be true to proceed with bulk deletion"),
 ):
+    """Bulk delete all documents, clearing storage and resetting index stores.
+
+    Requires explicit confirmation via query parameter.
+    """
     try:
         if not confirm:
             logger.error("Bulk delete rejected: confirm parameter is false")

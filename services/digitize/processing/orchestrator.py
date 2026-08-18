@@ -104,6 +104,11 @@ def split_text_into_token_chunks(text, emb_endpoint, max_tokens=512, overlap=50,
 
 
 def flush_chunk(current_chunk, chunks, emb_endpoint, max_tokens, language=LanguageCodes.ENGLISH):
+    """Flushes the current buffered chunk content into structured token-limited chunks.
+
+    Splits the chunk content into smaller token-limited chunks if necessary, and appends them
+    to the global chunks list with appropriate metadata.
+    """
     content = current_chunk["content"].strip()
     if not content:
         return

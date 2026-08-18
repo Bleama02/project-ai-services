@@ -261,6 +261,10 @@ def merge_consecutive_tables(table_dict: dict) -> dict:
 
 
 def process_table(converted_doc, doc_path, out_path, gen_model, gen_endpoint, document_language=LanguageCodes.ENGLISH):
+    """Extract, process, and summarize tables found in a document.
+
+    Saves the extracted tables and their LLM-generated summaries to a JSON file.
+    """
     table_count = 0
     process_time = 0.0
     filtered_table_dicts = {}
