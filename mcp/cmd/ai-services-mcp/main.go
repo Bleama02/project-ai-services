@@ -14,6 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultPort      = 3000
+	keyValueParts    = 2
+)
+
 var (
 	description     string
 	endpoint        string
@@ -51,7 +56,7 @@ func init() {
 	rootCmd.Flags().StringSliceVarP(&tags, "tag", "T", nil, "Only expose tools for operations with specified tags")
 	rootCmd.Flags().BoolVarP(&configOutput, "config", "C", false, "Output MCP client-compatible configuration instead of starting server")
 	rootCmd.Flags().BoolVarP(&httpMode, "http", "S", false, "Use HTTP transport instead of stdio")
-	rootCmd.Flags().IntVarP(&port, "port", "p", 3000, "Port number for HTTP server (used with --http)")
+	rootCmd.Flags().IntVarP(&port, "port", "p", defaultPort, "Port number for HTTP server (used with --http)")
 	rootCmd.Flags().BoolVar(&tlsSkipVerify, "tls-skip-verify", false, "Skip TLS certificate verification for the description fetch and API requests (insecure; for self-signed or internal-CA endpoints)")
 
 	if err := rootCmd.MarkFlagRequired("description"); err != nil {
@@ -233,8 +238,8 @@ func parseKeyValuePairs(pairs []string, pairType string) (map[string]string, err
 	result := make(map[string]string)
 
 	for _, pair := range pairs {
-		parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
-		if len(parts) < 2 {
+		parts := strings.SplitN(strings.TrimSpace(pair), "=", keyValueParts)
+		if len(parts) < keyValueParts {
 			return nil, errors.NewUsageError("Must provide %s value in the form: <name>=<value>", pairType)
 		}
 
@@ -258,6 +263,7 @@ func outputConfig(serverName string) error {
 	}
 
 	fmt.Println(configStr)
+
 	return nil
 }
 

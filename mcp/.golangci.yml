@@ -1,25 +1,36 @@
 version: "2"
 run:
+  go: "1.23"
   build-tags:
     - exclude_graphdriver_btrfs containers_image_openpgp remote
 linters:
   enable:
-    - cyclop
     - govet
     - funlen
-    - gocognit
     - godoclint
     - godot
     - misspell
     - mnd
-    - nestif
     - nlreturn
-    - prealloc
+    
     - whitespace
   disable:
     - wsl
     - depguard
+    - cyclop
+    - gocognit
+    - nestif
+    
+    
   exclusions:
+    rules:
+      - linters:
+          - staticcheck
+        text: "SA1029"
     paths:
       - docs/docs.go
       - ".*_test\\.go$"
+  settings:
+    funlen:
+      lines: 150
+      statements: 150

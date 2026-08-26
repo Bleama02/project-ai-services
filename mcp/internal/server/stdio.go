@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/project-ai-services/mcp/internal/tool"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/project-ai-services/mcp/internal/tool"
 )
 
-// StartStdioServer starts the stdio MCP server using the official MCP SDK
+// StartStdioServer starts the stdio MCP server using the official MCP SDK.
 func StartStdioServer(aggregator *tool.Aggregator, tags []string) error {
 	server := &StdioServer{
 		aggregator: aggregator,
@@ -20,13 +20,13 @@ func StartStdioServer(aggregator *tool.Aggregator, tags []string) error {
 	return server.Start()
 }
 
-// StdioServer implements the stdio MCP transport using the official SDK
+// StdioServer implements the stdio MCP transport using the official SDK.
 type StdioServer struct {
 	aggregator *tool.Aggregator
 	tags       []string
 }
 
-// Start starts the stdio server using the MCP SDK
+// Start starts the stdio server using the MCP SDK.
 func (s *StdioServer) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -66,7 +66,7 @@ func (s *StdioServer) Start() error {
 	return mcpServer.Run(ctx, transport)
 }
 
-// createToolHandler creates an MCP tool handler that delegates to the aggregator
+// createToolHandler creates an MCP tool handler that delegates to the aggregator.
 func (s *StdioServer) createToolHandler() mcp.ToolHandler {
 	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Convert to the aggregator's expected type

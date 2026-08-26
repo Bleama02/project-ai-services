@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ConvertSchemaToJSONSchema converts a libopenapi schema to a JSON Schema
+// ConvertSchemaToJSONSchema converts a libopenapi schema to a JSON Schema.
 func ConvertSchemaToJSONSchema(schema *base.SchemaProxy) *jsonschema.Schema {
 	if schema == nil {
 		return nil
@@ -20,7 +20,7 @@ func ConvertSchemaToJSONSchema(schema *base.SchemaProxy) *jsonschema.Schema {
 		return nil
 	}
 
-	// Render the schema to YAML bytes and convert to map
+	// Render the schema to YAML bytes and convert to map.
 	renderedYAML, _ := built.Render()
 	if renderedYAML == nil {
 		return nil
@@ -32,7 +32,7 @@ func ConvertSchemaToJSONSchema(schema *base.SchemaProxy) *jsonschema.Schema {
 		return nil
 	}
 
-	// Marshal to JSON and unmarshal to jsonschema.Schema
+	// Marshal to JSON and unmarshal to jsonschema.Schema.
 	jsonData, err := json.Marshal(schemaMap)
 	if err != nil {
 		return nil

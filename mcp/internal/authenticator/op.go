@@ -10,21 +10,21 @@ import (
 	"github.com/project-ai-services/mcp/internal/errors"
 )
 
-// OPAuthenticator authenticates using 1Password CLI
+// OPAuthenticator authenticates using 1Password CLI.
 type OPAuthenticator struct {
 	reference    string
 	apiKeyAuth   *APIKeyAuthenticator
 	cachedAPIKey string
 }
 
-// NewOPAuthenticator creates a new 1Password authenticator
+// NewOPAuthenticator creates a new 1Password authenticator.
 func NewOPAuthenticator(reference string) *OPAuthenticator {
 	return &OPAuthenticator{
 		reference: reference,
 	}
 }
 
-// GetBearerToken returns a bearer token using an API key from 1Password
+// GetBearerToken returns a bearer token using an API key from 1Password.
 func (a *OPAuthenticator) GetBearerToken(ctx context.Context) (string, error) {
 	// Retrieve the API key from 1Password
 	apiKey, err := a.getAPIKeyFromOP(ctx)
@@ -41,17 +41,17 @@ func (a *OPAuthenticator) GetBearerToken(ctx context.Context) (string, error) {
 	return a.apiKeyAuth.GetBearerToken(ctx)
 }
 
-// IsPassthrough returns false for 1Password authentication
+// IsPassthrough returns false for 1Password authentication.
 func (a *OPAuthenticator) IsPassthrough() bool {
 	return false
 }
 
-// GetType returns the authenticator type
+// GetType returns the authenticator type.
 func (a *OPAuthenticator) GetType() string {
 	return string(AuthTypeOP)
 }
 
-// getAPIKeyFromOP retrieves the API key from 1Password using the op CLI
+// getAPIKeyFromOP retrieves the API key from 1Password using the op CLI.
 func (a *OPAuthenticator) getAPIKeyFromOP(ctx context.Context) (string, error) {
 	// Validate the reference format to prevent command injection
 	// Valid 1Password references: op://vault/item/field or op://vault/item[/section]/field
@@ -79,7 +79,7 @@ func (a *OPAuthenticator) getAPIKeyFromOP(ctx context.Context) (string, error) {
 	return apiKey, nil
 }
 
-// validateOPReference validates that a string is a valid 1Password reference format
+// validateOPReference validates that a string is a valid 1Password reference format.
 func validateOPReference(ref string) error {
 	// 1Password references must start with "op://" and contain valid characters
 	// Format: op://vault/item[/section]/field
@@ -91,5 +91,6 @@ func validateOPReference(ref string) error {
 	if !matched {
 		return fmt.Errorf("reference must match format: op://vault/item[/section]/field")
 	}
+
 	return nil
 }

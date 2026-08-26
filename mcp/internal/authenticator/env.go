@@ -7,13 +7,13 @@ import (
 	"github.com/project-ai-services/mcp/internal/errors"
 )
 
-// EnvAuthenticator authenticates using an API key from environment variable
+// EnvAuthenticator authenticates using an API key from environment variable.
 type EnvAuthenticator struct {
 	varName    string
 	apiKeyAuth *APIKeyAuthenticator
 }
 
-// NewEnvAuthenticator creates a new environment variable authenticator
+// NewEnvAuthenticator creates a new environment variable authenticator.
 func NewEnvAuthenticator(varName string) (*EnvAuthenticator, error) {
 	apiKey := os.Getenv(varName)
 	if apiKey == "" {
@@ -26,7 +26,7 @@ func NewEnvAuthenticator(varName string) (*EnvAuthenticator, error) {
 	}, nil
 }
 
-// GetBearerToken returns a bearer token using the API key from environment
+// GetBearerToken returns a bearer token using the API key from environment.
 func (a *EnvAuthenticator) GetBearerToken(ctx context.Context) (string, error) {
 	// Re-check the environment variable in case it changed
 	apiKey := os.Getenv(a.varName)
@@ -42,12 +42,12 @@ func (a *EnvAuthenticator) GetBearerToken(ctx context.Context) (string, error) {
 	return a.apiKeyAuth.GetBearerToken(ctx)
 }
 
-// IsPassthrough returns false for environment authentication
+// IsPassthrough returns false for environment authentication.
 func (a *EnvAuthenticator) IsPassthrough() bool {
 	return false
 }
 
-// GetType returns the authenticator type
+// GetType returns the authenticator type.
 func (a *EnvAuthenticator) GetType() string {
 	return string(AuthTypeEnv)
 }
