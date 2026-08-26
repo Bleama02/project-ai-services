@@ -20,8 +20,6 @@ linters:
     - cyclop
     - gocognit
     - nestif
-    
-    
   exclusions:
     rules:
       - linters:
