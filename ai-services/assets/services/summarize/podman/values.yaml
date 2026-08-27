@@ -10,4 +10,7 @@ postgres:
   # @generate:password
   password: ""
 
+mcp:
+  image: icr.io/ai-services-private/ai-services-mcp:latest
+  port: "6001"
 # Made with Bob

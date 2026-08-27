@@ -5,7 +5,7 @@ metadata:
   labels:
     ai-services.io/template: "{{ .TemplateID }}"
   annotations:
-    ai-services.io/routes: "6000:summarize-api-{{ .InstanceSlug }}:api"
+    ai-services.io/routes: "6000:summarize-api-{{ .InstanceSlug }}:api,6001:summarize-mcp-{{ .InstanceSlug }}:mcp"
     # ai-services.io/ports: "{{ or .Values.summarize.port }}:6000"  # Uncomment to expose ports directly (bypasses Caddy)
 spec:
   restartPolicy: always
@@ -106,3 +106,30 @@ spec:
           name: vllm-secret
           readOnly: true
         {{- end }}
+    - name: mcp-sidecar
+      image: "{{ .Values.mcp.image }}"
+      env:
+        - name: OPENAPI_URL
+          value: "http://localhost:6000/openapi.json"
+        - name: SERVICE_URL
+          value: "http://localhost:6000"
+        - name: TAGS
+          value: "summarization,jobs"
+        - name: PORT
+          value: "{{ .Values.mcp.port }}"
+      ports:
+        - containerPort: {{ .Values.mcp.port }}
+          protocol: TCP
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: {{ .Values.mcp.port }}
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        timeoutSeconds: 5
+        failureThreshold: 3
+      resources:
+        requests: 
+          memory: "128Mi"
+        limits:
+          memory: "128Mi"
