@@ -20,7 +20,7 @@ import (
 
 // LoadDescription loads an OpenAPI description from a file path or URL,
 // dereferencing all $ref fields inline. tlsSkipVerify disables TLS
-// certificate verification when loading from an HTTPS URL.
+// certificate verification when loading from an HTTPS URL
 func LoadDescription(ref string, tlsSkipVerify bool) (*highV3.Document, error) {
 	var data []byte
 	var err error
@@ -77,14 +77,14 @@ func LoadDescription(ref string, tlsSkipVerify bool) (*highV3.Document, error) {
 	return &model.Model, nil
 }
 
-// isURL checks if a string is a valid URL.
+// isURL checks if a string is a valid URL
 func isURL(str string) bool {
 	u, err := url.Parse(str)
 
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-// loadFromURL loads content from a URL.
+// loadFromURL loads content from a URL
 func loadFromURL(urlStr string, tlsSkipVerify bool) ([]byte, error) {
 	// Validate URL scheme to prevent SSRF attacks
 	if err := validateURL(urlStr); err != nil {
@@ -122,7 +122,7 @@ func loadFromURL(urlStr string, tlsSkipVerify bool) ([]byte, error) {
 	return data, nil
 }
 
-// loadFromFile loads content from a file.
+// loadFromFile loads content from a file
 func loadFromFile(path string) ([]byte, error) {
 	// Validate file path to prevent directory traversal
 	if err := validateFilePath(path); err != nil {
@@ -143,7 +143,7 @@ func loadFromFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-// validateURL ensures the URL uses a safe scheme (http or https only).
+// validateURL ensures the URL uses a safe scheme (http or https only)
 func validateURL(urlStr string) error {
 	u, err := url.Parse(urlStr)
 	if err != nil {
@@ -158,7 +158,7 @@ func validateURL(urlStr string) error {
 	return nil
 }
 
-// validateFilePath ensures the file path doesn't contain directory traversal attempts.
+// validateFilePath ensures the file path doesn't contain directory traversal attempts
 func validateFilePath(path string) error {
 	// Check for directory traversal patterns
 	if strings.Contains(path, "..") {

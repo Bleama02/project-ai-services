@@ -10,7 +10,7 @@ import (
 	"github.com/project-ai-services/mcp/internal/openapi"
 )
 
-// Aggregator aggregates tools from OpenAPI operations.
+// Aggregator aggregates tools from OpenAPI operations
 type Aggregator struct {
 	intf          *openapi.Interface
 	endpoint      string
@@ -20,7 +20,7 @@ type Aggregator struct {
 	providers     []*Provider
 }
 
-// NewAggregator creates a new tool aggregator.
+// NewAggregator creates a new tool aggregator
 func NewAggregator(intf *openapi.Interface, endpoint string, auth authenticator.Authenticator,
 	globalQuery, globalHeaders map[string]string, tlsSkipVerify bool) (*Aggregator, error) {
 	aggregator := &Aggregator{
@@ -45,7 +45,7 @@ func NewAggregator(intf *openapi.Interface, endpoint string, auth authenticator.
 	return aggregator, nil
 }
 
-// GetTools returns all tools, optionally filtered by tags.
+// GetTools returns all tools, optionally filtered by tags
 func (a *Aggregator) GetTools(tags []string) []*mcp.Tool {
 	var tools []*mcp.Tool
 
@@ -87,7 +87,7 @@ func (a *Aggregator) GetTools(tags []string) []*mcp.Tool {
 	return tools
 }
 
-// HandleToolCall handles an MCP tool call request.
+// HandleToolCall handles an MCP tool call request
 func (a *Aggregator) HandleToolCall(ctx context.Context, params *mcp.CallToolParamsRaw) (*mcp.CallToolResult, error) {
 	// Find the provider for this tool
 	for _, provider := range a.providers {
@@ -99,22 +99,22 @@ func (a *Aggregator) HandleToolCall(ctx context.Context, params *mcp.CallToolPar
 	return nil, fmt.Errorf("unknown tool: %s", params.Name)
 }
 
-// GetFriendlyName returns the friendly name for the service.
+// GetFriendlyName returns the friendly name for the service
 func (a *Aggregator) GetFriendlyName() string {
 	return a.intf.Doc.Info.Title
 }
 
-// GetName returns the canonical name for the service.
+// GetName returns the canonical name for the service
 func (a *Aggregator) GetName() string {
 	return a.intf.Name
 }
 
-// GetTags returns all available tags.
+// GetTags returns all available tags
 func (a *Aggregator) GetTags() []string {
 	return a.intf.Tags
 }
 
-// canonicalizeHeaders converts headers to lowercase keys.
+// canonicalizeHeaders converts headers to lowercase keys
 func canonicalizeHeaders(headers map[string]string) map[string]string {
 	if headers == nil {
 		return make(map[string]string)

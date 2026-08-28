@@ -2,11 +2,11 @@ package types
 
 import "github.com/google/jsonschema-go/jsonschema"
 
-// This file contains non-MCP types used throughout the application.
+// This file contains non-MCP types used throughout the application
 // All MCP-related types should use the official SDK directly:
-// import "github.com/modelcontextprotocol/go-sdk/mcp".
+// import "github.com/modelcontextprotocol/go-sdk/mcp"
 
-// HTTPMethod represents valid HTTP methods.
+// HTTPMethod represents valid HTTP methods
 type HTTPMethod string
 
 const (
@@ -20,7 +20,7 @@ const (
 	TRACE   HTTPMethod = "TRACE"
 )
 
-// IsValidMethod checks if a string is a valid HTTP method.
+// IsValidMethod checks if a string is a valid HTTP method
 func IsValidMethod(method string) bool {
 	switch HTTPMethod(method) {
 	case GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS, TRACE:
@@ -30,7 +30,7 @@ func IsValidMethod(method string) bool {
 	}
 }
 
-// OperationInfo contains information about an OpenAPI operation.
+// OperationInfo contains information about an OpenAPI operation
 type OperationInfo struct {
 	OperationID string
 	Method      HTTPMethod
@@ -42,7 +42,7 @@ type OperationInfo struct {
 	RequestBody *RequestBodyInfo
 }
 
-// ParameterInfo contains information about an OpenAPI parameter.
+// ParameterInfo contains information about an OpenAPI parameter
 type ParameterInfo struct {
 	Name        string
 	In          string // path, query, header, cookie
@@ -51,19 +51,19 @@ type ParameterInfo struct {
 	Description string
 }
 
-// RequestBodyInfo contains information about an OpenAPI request body.
+// RequestBodyInfo contains information about an OpenAPI request body
 type RequestBodyInfo struct {
 	Required    bool
 	ContentType string
 	Schema      *jsonschema.Schema
 }
 
-// ConfigOutput represents the configuration output for MCP clients.
+// ConfigOutput represents the configuration output for MCP clients
 type ConfigOutput struct {
 	MCPServers map[string]MCPClientServerConfig `json:"mcpServers"`
 }
 
-// MCPClientServerConfig represents an MCP client server configuration.
+// MCPClientServerConfig represents an MCP client server configuration
 type MCPClientServerConfig struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`

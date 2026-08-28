@@ -19,7 +19,7 @@ import (
 	"github.com/project-ai-services/mcp/internal/types"
 )
 
-// Provider provides a single tool based on an OpenAPI operation.
+// Provider provides a single tool based on an OpenAPI operation
 type Provider struct {
 	operation     types.OperationInfo
 	endpoint      string
@@ -31,7 +31,7 @@ type Provider struct {
 	tlsSkipVerify bool
 }
 
-// NewProvider creates a new tool provider.
+// NewProvider creates a new tool provider
 func NewProvider(operation types.OperationInfo, endpoint string,
 	auth authenticator.Authenticator,
 	globalQuery, globalHeaders map[string]string,
@@ -51,7 +51,7 @@ func NewProvider(operation types.OperationInfo, endpoint string,
 	return provider, nil
 }
 
-// getBodyName determines the appropriate name for the request body parameter.
+// getBodyName determines the appropriate name for the request body parameter
 func getBodyName(operation types.OperationInfo) string {
 	if strings.HasPrefix(operation.OperationID, "create_") || strings.HasPrefix(operation.OperationID, "replace_") {
 		return "prototype"
@@ -62,13 +62,13 @@ func getBodyName(operation types.OperationInfo) string {
 	return "data"
 }
 
-// schemaBuilder helps build JSON schemas incrementally.
+// schemaBuilder helps build JSON schemas incrementally
 type schemaBuilder struct {
 	properties map[string]*jsonschema.Schema
 	required   []string
 }
 
-// toSchema converts the builder to a final schema.
+// toSchema converts the builder to a final schema
 func (sb *schemaBuilder) toSchema() *jsonschema.Schema {
 	schema := &jsonschema.Schema{
 		Type:       "object",
@@ -81,7 +81,7 @@ func (sb *schemaBuilder) toSchema() *jsonschema.Schema {
 	return schema
 }
 
-// addProperty adds a property to the schema.
+// addProperty adds a property to the schema
 func (sb *schemaBuilder) addProperty(name string, prop *jsonschema.Schema, required bool) {
 	if prop != nil {
 		sb.properties[name] = prop
@@ -91,7 +91,7 @@ func (sb *schemaBuilder) addProperty(name string, prop *jsonschema.Schema, requi
 	}
 }
 
-// GetTool returns the MCP tool definition.
+// GetTool returns the MCP tool definition
 func (p *Provider) GetTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        p.operation.OperationID,
@@ -100,7 +100,7 @@ func (p *Provider) GetTool() *mcp.Tool {
 	}
 }
 
-// buildInputSchema builds the JSON schema for the tool's input.
+// buildInputSchema builds the JSON schema for the tool's input
 func (p *Provider) buildInputSchema() *jsonschema.Schema {
 	sb := &schemaBuilder{
 		properties: make(map[string]*jsonschema.Schema),
@@ -115,7 +115,7 @@ func (p *Provider) buildInputSchema() *jsonschema.Schema {
 	return sb.toSchema()
 }
 
-// addPathParametersToSchema adds path parameters to the schema.
+// addPathParametersToSchema adds path parameters to the schema
 func (p *Provider) addPathParametersToSchema(sb *schemaBuilder) {
 	for _, param := range p.operation.Parameters {
 		if param.In == "path" {
@@ -125,7 +125,7 @@ func (p *Provider) addPathParametersToSchema(sb *schemaBuilder) {
 	}
 }
 
-// addQueryParametersToSchema adds query parameters to the schema.
+// addQueryParametersToSchema adds query parameters to the schema
 func (p *Provider) addQueryParametersToSchema(sb *schemaBuilder) {
 	queryParams := p.getQueryParameters()
 	if len(queryParams) > 0 {
@@ -137,7 +137,7 @@ func (p *Provider) addQueryParametersToSchema(sb *schemaBuilder) {
 	}
 }
 
-// addHeaderParametersToSchema adds header parameters to the schema.
+// addHeaderParametersToSchema adds header parameters to the schema
 func (p *Provider) addHeaderParametersToSchema(sb *schemaBuilder) {
 	headerParams := p.getHeaderParameters()
 	if len(headerParams) > 0 {
@@ -149,7 +149,7 @@ func (p *Provider) addHeaderParametersToSchema(sb *schemaBuilder) {
 	}
 }
 
-// addRequestBodyToSchema adds request body to the schema.
+// addRequestBodyToSchema adds request body to the schema
 func (p *Provider) addRequestBodyToSchema(sb *schemaBuilder) {
 	if p.operation.RequestBody != nil {
 		bodySchema := p.buildRequestBodySchema()
@@ -157,7 +157,7 @@ func (p *Provider) addRequestBodyToSchema(sb *schemaBuilder) {
 	}
 }
 
-// getQueryParameters returns non-global query parameters.
+// getQueryParameters returns non-global query parameters
 func (p *Provider) getQueryParameters() []types.ParameterInfo {
 	var params []types.ParameterInfo
 	for _, param := range p.operation.Parameters {
@@ -172,7 +172,7 @@ func (p *Provider) getQueryParameters() []types.ParameterInfo {
 	return params
 }
 
-// getHeaderParameters returns non-global, non-auth header parameters.
+// getHeaderParameters returns non-global, non-auth header parameters
 func (p *Provider) getHeaderParameters() []types.ParameterInfo {
 	var params []types.ParameterInfo
 	for _, param := range p.operation.Parameters {
@@ -187,7 +187,7 @@ func (p *Provider) getHeaderParameters() []types.ParameterInfo {
 	return params
 }
 
-// buildParameterSchema builds a schema for a parameter.
+// buildParameterSchema builds a schema for a parameter
 func (p *Provider) buildParameterSchema(param types.ParameterInfo) *jsonschema.Schema {
 	if param.Schema == nil {
 		return &jsonschema.Schema{
@@ -207,7 +207,7 @@ func (p *Provider) buildParameterSchema(param types.ParameterInfo) *jsonschema.S
 	return schema
 }
 
-// buildQuerySchema builds a schema for query parameters.
+// buildQuerySchema builds a schema for query parameters
 func (p *Provider) buildQuerySchema(params []types.ParameterInfo) *jsonschema.Schema {
 	if len(params) == 0 {
 		return nil
@@ -234,7 +234,7 @@ func (p *Provider) buildQuerySchema(params []types.ParameterInfo) *jsonschema.Sc
 	return schema
 }
 
-// buildHeaderSchema builds a schema for header parameters.
+// buildHeaderSchema builds a schema for header parameters
 func (p *Provider) buildHeaderSchema(params []types.ParameterInfo) *jsonschema.Schema {
 	if len(params) == 0 {
 		return nil
@@ -263,7 +263,7 @@ func (p *Provider) buildHeaderSchema(params []types.ParameterInfo) *jsonschema.S
 	return schema
 }
 
-// buildRequestBodySchema builds a schema for the request body.
+// buildRequestBodySchema builds a schema for the request body
 func (p *Provider) buildRequestBodySchema() *jsonschema.Schema {
 	if p.operation.RequestBody == nil || p.operation.RequestBody.Schema == nil {
 		return nil
@@ -272,7 +272,7 @@ func (p *Provider) buildRequestBodySchema() *jsonschema.Schema {
 	return p.operation.RequestBody.Schema
 }
 
-// Execute executes the tool operation.
+// Execute executes the tool operation
 func (p *Provider) Execute(ctx context.Context, params *mcp.CallToolParamsRaw) (*mcp.CallToolResult, error) {
 	// Build the request URL
 	requestURL, err := p.buildRequestURL(params)
@@ -352,7 +352,7 @@ func (p *Provider) Execute(ctx context.Context, params *mcp.CallToolParamsRaw) (
 	}, nil
 }
 
-// buildRequestURL builds the complete request URL.
+// buildRequestURL builds the complete request URL
 func (p *Provider) buildRequestURL(params *mcp.CallToolParamsRaw) (string, error) {
 	var args map[string]interface{}
 	if len(params.Arguments) > 0 {
@@ -411,7 +411,7 @@ func (p *Provider) buildRequestURL(params *mcp.CallToolParamsRaw) (string, error
 	return fullURL, nil
 }
 
-// buildHeaders builds the request headers.
+// buildHeaders builds the request headers
 func (p *Provider) buildHeaders(ctx context.Context, params *mcp.CallToolParamsRaw) (map[string]string, error) {
 	headers := make(map[string]string)
 
@@ -465,7 +465,7 @@ func (p *Provider) buildHeaders(ctx context.Context, params *mcp.CallToolParamsR
 	return headers, nil
 }
 
-// hasLimitParameter checks if the operation has a limit parameter.
+// hasLimitParameter checks if the operation has a limit parameter
 func (p *Provider) hasLimitParameter() bool {
 	for _, param := range p.operation.Parameters {
 		if param.In == "query" && param.Name == "limit" {
@@ -476,7 +476,7 @@ func (p *Provider) hasLimitParameter() bool {
 	return false
 }
 
-// hasRequiredFields checks if a schema has required fields.
+// hasRequiredFields checks if a schema has required fields
 func hasRequiredFields(schema *jsonschema.Schema) bool {
 	return schema != nil && len(schema.Required) > 0
 }

@@ -191,7 +191,7 @@ func createAuthenticator() (authenticator.Authenticator, error) {
 	// delegated to the upstream API, which validates the caller's own token. A
 	// server-held credential would therefore be usable by anyone who can reach
 	// the port, so HTTP transport and passthrough authentication require each
-	// other. Stdio has no request headers to pass through.
+	// other. Stdio has no request headers to pass through
 	if httpMode && !authPassthrough {
 		return nil, errors.NewUsageError(
 			"Must use --auth-passthrough with --http. The HTTP server does not authenticate " +

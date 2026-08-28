@@ -8,7 +8,6 @@ linters:
     - govet
     - funlen
     - godoclint
-    - godot
     - misspell
     - mnd
     - nlreturn

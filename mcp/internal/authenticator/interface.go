@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-// Authenticator defines the interface for authentication methods.
+// Authenticator defines the interface for authentication methods
 type Authenticator interface {
 	// GetBearerToken returns a valid bearer token
 	GetBearerToken(ctx context.Context) (string, error)
@@ -16,7 +16,7 @@ type Authenticator interface {
 	GetType() string
 }
 
-// AuthType represents the type of authentication.
+// AuthType represents the type of authentication
 type AuthType string
 
 const (

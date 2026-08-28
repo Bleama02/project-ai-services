@@ -10,7 +10,7 @@ import (
 	"github.com/project-ai-services/mcp/internal/types"
 )
 
-// Interface represents a processed OpenAPI specification.
+// Interface represents a processed OpenAPI specification
 type Interface struct {
 	Doc        *v3.Document
 	Name       string
@@ -18,7 +18,7 @@ type Interface struct {
 	Tags       []string
 }
 
-// NewInterface creates a new Interface from an OpenAPI document.
+// NewInterface creates a new Interface from an OpenAPI document
 func NewInterface(doc *v3.Document) *Interface {
 	intf := &Interface{
 		Doc:        doc,
@@ -33,7 +33,7 @@ func NewInterface(doc *v3.Document) *Interface {
 	return intf
 }
 
-// canonicalizeName converts a name to a canonical format.
+// canonicalizeName converts a name to a canonical format
 func canonicalizeName(name string) string {
 	// Convert to lowercase, remove special characters, replace spaces with hyphens
 	name = strings.ToLower(name)
@@ -45,7 +45,7 @@ func canonicalizeName(name string) string {
 	return name
 }
 
-// collectOperations extracts all operations from the OpenAPI spec.
+// collectOperations extracts all operations from the OpenAPI spec
 func (intf *Interface) collectOperations() {
 	if intf.Doc.Paths == nil || intf.Doc.Paths.PathItems == nil {
 		return
@@ -201,7 +201,7 @@ func (intf *Interface) collectOperations() {
 	}
 }
 
-// collectTags extracts all unique tags from the specification.
+// collectTags extracts all unique tags from the specification
 func (intf *Interface) collectTags() {
 	tagSet := make(map[string]bool)
 

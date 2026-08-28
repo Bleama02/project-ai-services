@@ -268,7 +268,7 @@ func (s *HTTPServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// use X-Forwarded-For instead, so callers are not sharing a single rate limit.
+// use X-Forwarded-For instead, so callers are not sharing a single rate limit
 func clientIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		return xff
