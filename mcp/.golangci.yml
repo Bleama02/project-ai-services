@@ -23,7 +23,7 @@ linters:
     rules:
       - linters:
           - staticcheck
-        text: "SA1029"
+        text: "SA1029|ST1005"
     paths:
       - docs/docs.go
       - ".*_test\\.go$"

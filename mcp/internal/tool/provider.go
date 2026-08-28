@@ -445,14 +445,14 @@ func (p *Provider) buildHeaders(ctx context.Context, params *mcp.CallToolParamsR
 			if httpHeaders, ok := requestHeaders.(http.Header); ok {
 				auth := httpHeaders.Get("Authorization")
 				if auth == "" {
-					return nil, fmt.Errorf("authorization header is required when using passthrough authentication mode. The client must provide the 'Authorization' header in the HTTP request")
+					return nil, fmt.Errorf("Authorization header is required when using passthrough authentication mode. The client must provide the 'Authorization' header in the HTTP request")
 				}
 				headers["authorization"] = auth
 			} else {
-				return nil, fmt.Errorf("authorization header is required when using passthrough authentication mode")
+				return nil, fmt.Errorf("Authorization header is required when using passthrough authentication mode")
 			}
 		} else {
-			return nil, fmt.Errorf("authorization header is required when using passthrough authentication mode")
+			return nil, fmt.Errorf("Authorization header is required when using passthrough authentication mode")
 		}
 	} else {
 		token, err := p.authenticator.GetBearerToken(ctx)

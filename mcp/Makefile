@@ -22,12 +22,16 @@ PLATFORMS := \
 	linux/amd64 \
 	linux/ppc64le
 
-.PHONY: build build-optimized build-container push clean clean-coverage \
+.PHONY: build build-binary build-optimized build-container push clean clean-coverage \
         test test-coverage test-coverage-html lint run install \
         cross-compile binary image-tag help
 
-# Build the application (native)
+# Build container image (used by CI via build-and-publish-image.yml)
 build:
+	$(CONTAINER_BUILDER) build -t $(REGISTRY)/$(IMAGE):$(TAG) -f Containerfile .
+
+# Build the Go binary (native)
+build-binary:
 	$(GO) build -o $(BIN)/$(BINARY) $(CMD)
 
 # Build with size optimizations (native)
@@ -115,7 +119,8 @@ image-tag:
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  build              - Build the application (native)"
+	@echo "  build              - Build container image (used by CI)"
+	@echo "  build-binary       - Build the Go binary (native)"
 	@echo "  build-optimized    - Build with size optimizations"
 	@echo "  build-container    - Build container image"
 	@echo "  push               - Push container image to registry"
