@@ -15,4 +15,4 @@ postgres:
   password: ""
 mcp:
   image: icr.io/ai-services-private/ai-services-mcp:latest
-  port: "4001"
+  port: "4002"
