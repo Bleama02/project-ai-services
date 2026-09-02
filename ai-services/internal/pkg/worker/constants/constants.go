@@ -16,6 +16,10 @@ const (
 	// WorkerDataSubDir is the on-disk subtree written by deploy.Setup; removed by uninstall.
 	WorkerDataSubDir = "worker"
 
+	WorkerAppName         = "ai-services"
+	WorkerAppTemplate     = "worker"
+	WorkerHelmReleaseName = "ai-services-worker"
+
 	// BaseDirEnvVar is injected into the Caddy container at deploy time; read back by uninstall.
 	BaseDirEnvVar = "AI_SERVICES_BASE_DIR"
 
@@ -23,4 +27,14 @@ const (
 	MetaKeyBaseDir      = "basedir"
 	MetaKeyDomainSuffix = "domainSuffix"
 	MetaKeyHTTPSPort    = "httpsPort"
+
+	// ArgParamCaddyHTTPSPort, ArgParamWorkerToken, ArgParamWorkerGatewayAddr,
+	// ArgParamWorkerOptionalFlags, ArgParamWorkerPodmanURI, and ArgParamWorkerAuthFile
+	// are template value-override keys used when deploying worker pods.
+	ArgParamCaddyHTTPSPort      = "caddy.httpsPort"
+	ArgParamWorkerToken         = "worker.token"
+	ArgParamWorkerGatewayAddr   = "worker.gatewayAddr"
+	ArgParamWorkerOptionalFlags = "worker.optionalFlags"
+	ArgParamWorkerPodmanURI     = "worker.podman.uri"
+	ArgParamWorkerAuthFile      = "worker.podman.authFileContent"
 )
