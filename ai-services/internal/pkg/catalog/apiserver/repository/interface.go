@@ -36,6 +36,11 @@ type DatasourceServiceInterface interface {
 	// the response body contains a non-empty PropagationErrors list.
 	UpdateDatasource(ctx context.Context, id uuid.UUID, req apimodels.UpdateDatasourceRequest) (*apimodels.UpdateDatasourceResponse, error)
 
+	// GetDatasourceApplications returns the list of applications currently connected to a datasource,
+	// each enriched with live sync state from its downstream service pod.
+	// Returns a *ValidationError with code 404 when the connector does not exist.
+	GetDatasourceApplications(ctx context.Context, id uuid.UUID) (*apimodels.DatasourceApplicationsResponse, error)
+
 	// GetApplicationDatasource returns the catalog identity and live Digitize sync state for
 	// a datasource that is connected to the given application.
 	// Returns a *ValidationError with code 404 when no service_dependencies row links
