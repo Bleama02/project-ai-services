@@ -6,6 +6,7 @@ import {
   SERVICE_ENDPOINTS,
 } from "@/constants/api-endpoints.constants";
 import { COMPONENT_TYPES } from "@/constants";
+import { WORKER_RUNTIME_LABELS } from "@/constants/app.constants";
 import type {
   ArchitectureSummary,
   ServiceSummary,
@@ -346,6 +347,11 @@ export function transformApplicationToRow(
     status: app.status as DigitalAssistantRow["status"],
     type: app.type,
     uptime: calculateUptime(app.created_at),
+    workerResource: app.worker?.name ?? "",
+    workerType:
+      WORKER_RUNTIME_LABELS[app.worker?.runtime_type ?? ""]?.short ??
+      app.worker?.runtime_type ??
+      "",
     messages: app.status === "Running" ? "" : app.message || "",
     actions: "actions",
     children: app.services.map((service) => ({
@@ -353,6 +359,8 @@ export function transformApplicationToRow(
       name: `${service.type} (service)`,
       status: service.status as DigitalAssistantRow["status"],
       uptime: "",
+      workerResource: "",
+      workerType: "",
       messages: "",
       actions: "actions",
     })),
@@ -369,6 +377,11 @@ export function transformDeployedServiceToRow(
     status: app.status as DeployedServicesRow["status"],
     type: app.type,
     uptime: calculateUptime(app.created_at),
+    workerResource: app.worker?.name ?? "",
+    workerType:
+      WORKER_RUNTIME_LABELS[app.worker?.runtime_type ?? ""]?.short ??
+      app.worker?.runtime_type ??
+      "",
     service: app.type || "",
     messages: app.message || "",
     actions: "actions",
