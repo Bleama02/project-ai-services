@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"log"
 	"regexp"
 	"strings"
 
@@ -154,6 +155,7 @@ func (intf *Interface) collectOperations() {
 					for pair := rb.Content.First(); pair != nil; pair = pair.Next() {
 						ct := pair.Key()
 						mediaType := pair.Value()
+						log.Printf("[DEBUG] request body content type: %q schema nil: %v", ct, mediaType.Schema == nil)
 	
 						if strings.Contains(strings.ToLower(ct), "merge-patch+json") {
 							contentType = ct
@@ -169,6 +171,7 @@ func (intf *Interface) collectOperations() {
 						}
 					}
 				}
+				log.Printf("[DEBUG] final contentType: %q schema nil: %v", contentType, schema == nil)
 
 				if contentType != "" && schema != nil {
 					jsonSchema := ConvertSchemaToJSONSchema(schema)
