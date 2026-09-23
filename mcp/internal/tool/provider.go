@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"regexp"
 	"strings"
@@ -299,12 +302,57 @@ func (p *Provider) Execute(ctx context.Context, params *mcp.CallToolParamsRaw) (
 		}
 
 		if bodyData, exists := args[p.bodyName]; exists {
-			bodyBytes, err := json.Marshal(bodyData)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal request body: %w", err)
+			if strings.Contains(strings.ToLower(p.operation.RequestBody.ContentType), "multipart/form-data") {
+				var buf bytes.Buffer
+				w := multipart.NewWriter(&buf)
+				if fields, ok := bodyData.(map[string]interface{}); ok {
+					for k, v := range fields {
+						// Handle arrays (e.g. files: [base64str, ...])
+						var values []interface{}
+						if arr, ok := v.([]interface{}); ok {
+							values = arr
+						} else {
+							values = []interface{}{v}
+						}
+						for _, item := range values {
+							str := fmt.Sprintf("%v", item)
+							// Try to decode as base64 binary — if successful treat as file part
+							if decoded, err := base64.StdEncoding.DecodeString(str); err == nil {
+								h := make(textproto.MIMEHeader)
+								h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, k, k))
+								h.Set("Content-Type", "application/octet-stream")
+								fw, err := w.CreatePart(h)
+								if err != nil {
+									return nil, fmt.Errorf("failed to create file part %q: %w", k, err)
+								}
+								if _, err := fw.Write(decoded); err != nil {
+									return nil, fmt.Errorf("failed to write file part %q: %w", k, err)
+								}
+							} else {
+								fw, err := w.CreateFormField(k)
+								if err != nil {
+									return nil, fmt.Errorf("failed to create form field %q: %w", k, err)
+								}
+								if _, err := fmt.Fprintf(fw, "%s", str); err != nil {
+									return nil, fmt.Errorf("failed to write form field %q: %w", k, err)
+								}
+							}
+						}
+					}
+				}
+				if err := w.Close(); err != nil {
+					return nil, fmt.Errorf("failed to close multipart writer: %w", err)
+				}
+				body = &buf
+				headers["content-type"] = w.FormDataContentType()
+			} else {
+				bodyBytes, err := json.Marshal(bodyData)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal request body: %w", err)
+				}
+				body = bytes.NewReader(bodyBytes)
+				headers["content-type"] = p.operation.RequestBody.ContentType
 			}
-			body = bytes.NewReader(bodyBytes)
-			headers["content-type"] = p.operation.RequestBody.ContentType
 		}
 	}
 
