@@ -78,7 +78,7 @@ func DeployCatalog(ctx context.Context, opts catalogUtils.PodmanConfigureOptions
 		}
 	}
 
-	return handlePostDeployment(ctx, caddyCtx, deployCtx, opts, adminPassword)
+	return handlePostDeployment(ctx, caddyCtx, deployCtx, opts, adminPassword, secretExists)
 }
 
 // executeCatalogDeployment deploys (or validates) the catalog pods and returns
@@ -150,7 +150,7 @@ func executeCatalogDeployment(ctx context.Context, deployCtx *deploy.DeployConte
 
 // handlePostDeployment handles route registration, login verification,
 // local worker join, and next steps display after catalog deployment.
-func handlePostDeployment(ctx context.Context, caddyCtx *caddy.Context, deployCtx *deploy.DeployContext, opts catalogUtils.PodmanConfigureOptions, adminPassword string) error {
+func handlePostDeployment(ctx context.Context, caddyCtx *caddy.Context, deployCtx *deploy.DeployContext, opts catalogUtils.PodmanConfigureOptions, adminPassword string, isReinstall bool) error {
 	logger.Debugln("handling post deployment steps...")
 
 	// Extract route infos from deployment context
@@ -178,6 +178,11 @@ func handlePostDeployment(ctx context.Context, caddyCtx *caddy.Context, deployCt
 	catalogClient, err := configure.LoginToCatalog(ctx, catalogAPIURL, adminPassword)
 	if err != nil {
 		return fmt.Errorf("admin password verification failed: %w", err)
+	}
+
+	// Validate --skip-local-worker has not changed since the original install.
+	if err := configure.ValidateSkipLocalWorker(ctx, catalogClient, isReinstall, opts.SkipLocalWorker); err != nil {
+		return err
 	}
 
 	if !opts.SkipLocalWorker {
