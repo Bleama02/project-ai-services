@@ -148,7 +148,9 @@ func (s *HTTPServer) Start() error {
 
 	streamHandler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		return mcpServer
-	}, &mcp.StreamableHTTPOptions{})
+	}, &mcp.StreamableHTTPOptions{
+		MaxRequestBodyBytes: 50 << 20, // 50 MiB limit (overrides SDK default 4 MiB)
+	})
 
 	mux := http.NewServeMux()
 
