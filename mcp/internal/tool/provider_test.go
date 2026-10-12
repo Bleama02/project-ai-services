@@ -727,7 +727,8 @@ func multipartFileOperation() types.OperationInfo {
 			Schema: &jsonschema.Schema{
 				Type: "object",
 				Properties: map[string]*jsonschema.Schema{
-					"file":            {Type: "string", Format: "binary"},
+					// OpenAPI 3.1 / FastAPI style file field
+					"file":            {Type: "string", ContentMediaType: "application/octet-stream"},
 					"target_language": {Type: "string"},
 				},
 			},
@@ -744,6 +745,22 @@ func TestProvider_FilenamesInSchema(t *testing.T) {
 	}
 	if _, ok := provider.GetTool().InputSchema.(*jsonschema.Schema).Properties[filenamesArg]; !ok {
 		t.Errorf("multipart file operation schema should contain %q", filenamesArg)
+	}
+
+	// OpenAPI 3.0 style: array of files marked with format: binary
+	op30 := multipartFileOperation()
+	op30.RequestBody.Schema = &jsonschema.Schema{
+		Type: "object",
+		Properties: map[string]*jsonschema.Schema{
+			"files": {Type: "array", Items: &jsonschema.Schema{Type: "string", Format: "binary"}},
+		},
+	}
+	provider, err = NewProvider(op30, "https://api.example.com", auth, nil, nil, false)
+	if err != nil {
+		t.Fatalf("NewProvider() error = %v", err)
+	}
+	if _, ok := provider.GetTool().InputSchema.(*jsonschema.Schema).Properties[filenamesArg]; !ok {
+		t.Errorf("OpenAPI 3.0 multipart file operation schema should contain %q", filenamesArg)
 	}
 
 	jsonOp := types.OperationInfo{

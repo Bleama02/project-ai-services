@@ -115,17 +115,20 @@ func detectMIMEType(data []byte) string {
 	return "application/octet-stream"
 }
 
-// binaryFields returns the names of file (format: binary) fields in a multipart request body schema.
+// isBinarySchema reports whether a schema describes file content. OpenAPI 3.0 uses
+// "format: binary"; OpenAPI 3.1 (e.g. FastAPI) uses "contentMediaType: application/octet-stream".
+func isBinarySchema(s *jsonschema.Schema) bool {
+	return s != nil && (s.Format == "binary" || s.ContentMediaType == "application/octet-stream")
+}
+
+// binaryFields returns the names of file fields (single or array) in a multipart request body schema.
 func binaryFields(schema *jsonschema.Schema) map[string]bool {
 	fields := make(map[string]bool)
 	if schema == nil {
 		return fields
 	}
 	for name, prop := range schema.Properties {
-		if prop == nil {
-			continue
-		}
-		if prop.Format == "binary" || (prop.Items != nil && prop.Items.Format == "binary") {
+		if isBinarySchema(prop) || (prop != nil && isBinarySchema(prop.Items)) {
 			fields[name] = true
 		}
 	}

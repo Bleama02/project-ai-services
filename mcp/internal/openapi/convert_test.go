@@ -99,3 +99,25 @@ func TestConvertSchemaIntegration(t *testing.T) {
 		t.Error("No schemas found in test document")
 	}
 }
+
+func TestConvertSchemaKeepsContentMediaType(t *testing.T) {
+	doc, err := LoadDescription("testdata/multipart31.yaml", false)
+	if err != nil {
+		t.Fatalf("LoadDescription() error = %v", err)
+	}
+	ops := NewInterface(doc).Operations
+	if len(ops) != 1 || ops[0].RequestBody == nil || ops[0].RequestBody.Schema == nil {
+		t.Fatalf("expected one operation with a request body schema, got %+v", ops)
+	}
+	props := ops[0].RequestBody.Schema.Properties
+
+	if got := props["file"].ContentMediaType; got != "application/octet-stream" {
+		t.Errorf("file.contentMediaType = %q, want application/octet-stream", got)
+	}
+	if props["files"].Items == nil || props["files"].Items.ContentMediaType != "application/octet-stream" {
+		t.Errorf("files.items.contentMediaType not preserved: %+v", props["files"].Items)
+	}
+	if got := props["target_language"].ContentMediaType; got != "" {
+		t.Errorf("target_language.contentMediaType = %q, want empty", got)
+	}
+}
