@@ -13,8 +13,10 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -68,8 +70,11 @@ func getBodyName(operation types.OperationInfo) string {
 	return "data"
 }
 
+// filenamesArg is the optional tool argument carrying original filenames for file uploads.
+const filenamesArg = "filenames"
+
 // detectFilename returns a filename with the correct extension based on file magic bytes.
-// Falls back to "<fieldname>-<index>.bin" if the type is unrecognised.
+// Plain UTF-8 text is named ".txt". Falls back to "<fieldname>-<index>.bin" if the type is unrecognised.
 func detectFilename(data []byte, fieldName string, index int) string {
 	if len(data) >= magicBytesLen {
 		// PDF: %PDF
@@ -81,8 +86,16 @@ func detectFilename(data []byte, fieldName string, index int) string {
 			return fmt.Sprintf("%s-%d.docx", fieldName, index)
 		}
 	}
-	
+	if isText(data) {
+		return fmt.Sprintf("%s-%d.txt", fieldName, index)
+	}
+
 	return fmt.Sprintf("%s-%d.bin", fieldName, index)
+}
+
+// isText reports whether data is valid UTF-8 without NUL bytes.
+func isText(data []byte) bool {
+	return len(data) > 0 && utf8.Valid(data) && !bytes.Contains(data, []byte{0})
 }
 
 // detectMIMEType returns the MIME type based on file magic bytes.
@@ -95,11 +108,30 @@ func detectMIMEType(data []byte) string {
 			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 		}
 	}
-	
+	if isText(data) {
+		return "text/plain"
+	}
+
 	return "application/octet-stream"
 }
 
+// binaryFields returns the names of file (format: binary) fields in a multipart request body schema.
+func binaryFields(schema *jsonschema.Schema) map[string]bool {
+	fields := make(map[string]bool)
+	if schema == nil {
+		return fields
+	}
+	for name, prop := range schema.Properties {
+		if prop == nil {
+			continue
+		}
+		if prop.Format == "binary" || (prop.Items != nil && prop.Items.Format == "binary") {
+			fields[name] = true
+		}
+	}
 
+	return fields
+}
 
 // schemaBuilder helps build JSON schemas incrementally
 type schemaBuilder struct {
@@ -193,7 +225,21 @@ func (p *Provider) addRequestBodyToSchema(sb *schemaBuilder) {
 	if p.operation.RequestBody != nil {
 		bodySchema := p.buildRequestBodySchema()
 		sb.addProperty(p.bodyName, bodySchema, p.operation.RequestBody.Required)
+
+		if p.isMultipart() && len(binaryFields(bodySchema)) > 0 {
+			sb.addProperty(filenamesArg, &jsonschema.Schema{
+				Type:        "array",
+				Items:       &jsonschema.Schema{Type: "string"},
+				Description: "Optional original filenames (e.g. \"report.md\") for the uploaded files, in the same order as the files. The extension is used by the service to determine the file type.",
+			}, false)
+		}
 	}
+}
+
+// isMultipart reports whether the operation's request body is multipart/form-data.
+func (p *Provider) isMultipart() bool {
+	return p.operation.RequestBody != nil &&
+		strings.Contains(strings.ToLower(p.operation.RequestBody.ContentType), "multipart/form-data")
 }
 
 // getQueryParameters returns non-global query parameters
@@ -338,7 +384,14 @@ func (p *Provider) Execute(ctx context.Context, params *mcp.CallToolParamsRaw) (
 		}
 
 		if bodyData, exists := args[p.bodyName]; exists {
-			if strings.Contains(strings.ToLower(p.operation.RequestBody.ContentType), "multipart/form-data") {
+			if p.isMultipart() {
+				var filenames []string
+				if raw, ok := args[filenamesArg].([]interface{}); ok {
+					for _, f := range raw {
+						filenames = append(filenames, fmt.Sprintf("%v", f))
+					}
+				}
+				fileFields := binaryFields(p.buildRequestBodySchema())
 				var buf bytes.Buffer
 				w := multipart.NewWriter(&buf)
 				if fields, ok := bodyData.(map[string]interface{}); ok {
@@ -355,6 +408,9 @@ func (p *Provider) Execute(ctx context.Context, params *mcp.CallToolParamsRaw) (
 							// Try to decode as base64 binary — if successful treat as file part
 							if decoded, err := base64.StdEncoding.DecodeString(str); err == nil {
 								filename := detectFilename(decoded, k, i)
+								if fileFields[k] && i < len(filenames) && strings.TrimSpace(filenames[i]) != "" {
+									filename = filepath.Base(filenames[i])
+								}
 								mimeType := detectMIMEType(decoded)
 								h := make(textproto.MIMEHeader)
 								h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, k, filename))
