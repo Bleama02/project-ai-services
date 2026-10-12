@@ -2,6 +2,7 @@ package tool
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -694,5 +695,121 @@ func TestProvider_ExecuteTLSSkipVerify(t *testing.T) {
 	textContent, ok := result.Content[0].(*mcp.TextContent)
 	if !ok || !strings.Contains(textContent.Text, "Test User") {
 		t.Errorf("Execute() with tlsSkipVerify returned unexpected content: %+v", result.Content)
+	}
+}
+
+func TestDetectFilenameAndMIMEType_Text(t *testing.T) {
+	data := []byte("# Title\nHello world\n")
+	if got := detectFilename(data, "file", 0); got != "file-0.txt" {
+		t.Errorf("detectFilename() = %q, want %q", got, "file-0.txt")
+	}
+	if got := detectMIMEType(data); got != "text/plain" {
+		t.Errorf("detectMIMEType() = %q, want %q", got, "text/plain")
+	}
+
+	binary := []byte{0x00, 0xFF, 0x10, 0x20}
+	if got := detectFilename(binary, "file", 1); got != "file-1.bin" {
+		t.Errorf("detectFilename() = %q, want %q", got, "file-1.bin")
+	}
+	if got := detectMIMEType(binary); got != "application/octet-stream" {
+		t.Errorf("detectMIMEType() = %q, want %q", got, "application/octet-stream")
+	}
+}
+
+func multipartFileOperation() types.OperationInfo {
+	return types.OperationInfo{
+		OperationID: "uploadJob",
+		Method:      types.POST,
+		Path:        "/jobs",
+		RequestBody: &types.RequestBodyInfo{
+			Required:    true,
+			ContentType: "multipart/form-data",
+			Schema: &jsonschema.Schema{
+				Type: "object",
+				Properties: map[string]*jsonschema.Schema{
+					"file":            {Type: "string", Format: "binary"},
+					"target_language": {Type: "string"},
+				},
+			},
+		},
+	}
+}
+
+func TestProvider_FilenamesInSchema(t *testing.T) {
+	auth := &mockAuthenticator{token: "t", authType: "api-key"}
+
+	provider, err := NewProvider(multipartFileOperation(), "https://api.example.com", auth, nil, nil, false)
+	if err != nil {
+		t.Fatalf("NewProvider() error = %v", err)
+	}
+	if _, ok := provider.GetTool().InputSchema.(*jsonschema.Schema).Properties[filenamesArg]; !ok {
+		t.Errorf("multipart file operation schema should contain %q", filenamesArg)
+	}
+
+	jsonOp := types.OperationInfo{
+		OperationID: "createUser",
+		Method:      types.POST,
+		Path:        "/users",
+		RequestBody: &types.RequestBodyInfo{ContentType: "application/json", Schema: &jsonschema.Schema{Type: "object"}},
+	}
+	provider, err = NewProvider(jsonOp, "https://api.example.com", auth, nil, nil, false)
+	if err != nil {
+		t.Fatalf("NewProvider() error = %v", err)
+	}
+	if _, ok := provider.GetTool().InputSchema.(*jsonschema.Schema).Properties[filenamesArg]; ok {
+		t.Errorf("JSON operation schema should not contain %q", filenamesArg)
+	}
+}
+
+func TestProvider_ExecuteMultipartFilenames(t *testing.T) {
+	var gotFilename, gotContentType, gotLang string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Errorf("ParseMultipartForm() error = %v", err)
+		}
+		if fhs := r.MultipartForm.File["file"]; len(fhs) == 1 {
+			gotFilename = fhs[0].Filename
+			gotContentType = fhs[0].Header.Get("Content-Type")
+		}
+		gotLang = r.FormValue("target_language")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"job_id":"1"}`))
+	}))
+	defer server.Close()
+
+	auth := &mockAuthenticator{token: "t", authType: "api-key"}
+	provider, err := NewProvider(multipartFileOperation(), server.URL, auth, nil, nil, false)
+	if err != nil {
+		t.Fatalf("NewProvider() error = %v", err)
+	}
+
+	content := base64.StdEncoding.EncodeToString([]byte("# Title\nHello world\n"))
+	tests := []struct {
+		name         string
+		args         string
+		wantFilename string
+	}{
+		{"with filenames", `{"data":{"file":"` + content + `","target_language":"German"},"filenames":["dir/report.md"]}`, "report.md"},
+		{"without filenames", `{"data":{"file":"` + content + `","target_language":"German"}}`, "file-0.txt"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotFilename, gotContentType, gotLang = "", "", ""
+			if _, err := provider.Execute(context.Background(), &mcp.CallToolParamsRaw{
+				Name:      "uploadJob",
+				Arguments: json.RawMessage(tt.args),
+			}); err != nil {
+				t.Fatalf("Execute() error = %v", err)
+			}
+			if gotFilename != tt.wantFilename {
+				t.Errorf("filename = %q, want %q", gotFilename, tt.wantFilename)
+			}
+			if gotContentType != "text/plain" {
+				t.Errorf("content type = %q, want %q", gotContentType, "text/plain")
+			}
+			if gotLang != "German" {
+				t.Errorf("target_language = %q, want %q", gotLang, "German")
+			}
+		})
 	}
 }
