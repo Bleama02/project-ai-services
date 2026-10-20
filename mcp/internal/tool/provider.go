@@ -15,16 +15,12 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/project-ai-services/mcp/internal/authenticator"
 	"github.com/project-ai-services/mcp/internal/types"
 )
-// magicBytesLen is the number of leading bytes required to identify a file type by its magic bytes signature.
-const magicBytesLen = 4
-
 
 // Provider provides a single tool based on an OpenAPI operation
 type Provider struct {
@@ -69,50 +65,15 @@ func getBodyName(operation types.OperationInfo) string {
 	return "data"
 }
 
-// isText reports whether data is non-empty, valid UTF-8 text with no null bytes.
-func isText(data []byte) bool {
-	return len(data) > 0 && utf8.Valid(data) && !bytes.Contains(data, []byte{0})
+// uploadFilename returns the filename sent for a file part. The server does not know what
+// type a file is, so it sends no extension and leaves the decision to the API being called.
+func uploadFilename(fieldName string, index int) string {
+	return fmt.Sprintf("%s-%d", fieldName, index)
 }
 
-// detectFilename returns a filename with the correct extension based on file magic bytes.
-// Text content (including Markdown, which cannot be told apart from plain text) is named ".txt".
-// Falls back to "<fieldname>-<index>.bin" if the type is unrecognised.
-func detectFilename(data []byte, fieldName string, index int) string {
-	if len(data) >= magicBytesLen {
-		// PDF: %PDF
-		if data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46 {
-			return fmt.Sprintf("%s-%d.pdf", fieldName, index)
-		}
-		// DOCX / ZIP-based: PK\x03\x04
-		if data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04 {
-			return fmt.Sprintf("%s-%d.docx", fieldName, index)
-		}
-	}
-
-	if isText(data) {
-		return fmt.Sprintf("%s-%d.txt", fieldName, index)
-	}
-
-	return fmt.Sprintf("%s-%d.bin", fieldName, index)
-}
-
-// detectMIMEType returns the MIME type based on file magic bytes.
-func detectMIMEType(data []byte) string {
-	if len(data) >= magicBytesLen {
-		if data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46 {
-			return "application/pdf"
-		}
-		if data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04 {
-			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-		}
-	}
-
-	if isText(data) {
-		return "text/plain"
-	}
-
-	return "application/octet-stream"
-}
+// uploadContentType is the Content-Type sent for every file part. The server does not
+// guess a type; the API being called decides whether it accepts the file.
+const uploadContentType = "application/octet-stream"
 
 
 
@@ -369,8 +330,8 @@ func (p *Provider) Execute(ctx context.Context, params *mcp.CallToolParamsRaw) (
 							str := fmt.Sprintf("%v", item)
 							// Try to decode as base64 binary — if successful treat as file part
 							if decoded, err := base64.StdEncoding.DecodeString(str); err == nil {
-								filename := detectFilename(decoded, k, i)
-								mimeType := detectMIMEType(decoded)
+								filename := uploadFilename(k, i)
+								mimeType := uploadContentType
 								h := make(textproto.MIMEHeader)
 								h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, k, filename))
 								h.Set("Content-Type", mimeType)

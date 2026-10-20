@@ -156,11 +156,13 @@ async def create_translation_job(
     """Create a translation job for an uploaded text or Markdown file."""
     filename = file.filename or "upload"
 
-    # 1. Validate file extension.
+    # 1. Take the input type from the extension. If the name does not say
+    #    (e.g. ".bin" from an MCP upload), treat it as txt; the content check
+    #    below decides whether the file is acceptable.
     try:
         input_type = validate_file_extension(filename)
-    except ValueError as exc:
-        _raise_unsupported_file_type(str(exc))
+    except ValueError:
+        input_type = "txt"
 
     # 2. Validate file content (UTF-8, not binary, not PDF-disguised-as-text).
     try:
