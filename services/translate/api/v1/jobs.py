@@ -10,6 +10,7 @@ GET    /v1/translate/jobs/{job_id}/result/download — download translated file
 
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional, Union
 
 from fastapi import APIRouter, File, Form, Query, UploadFile, status
@@ -156,12 +157,15 @@ async def create_translation_job(
     """Create a translation job for an uploaded text or Markdown file."""
     filename = file.filename or "upload"
 
-    # 1. Take the input type from the extension. If the name does not say
-    #    (e.g. ".bin" from an MCP upload), treat it as txt; the content check
+    # 1. Validate file extension. A name with no extension at all (e.g. the
+    #    "file-0" an MCP upload carries) is treated as txt; the content check
     #    below decides whether the file is acceptable.
-    try:
-        input_type = validate_file_extension(filename)
-    except ValueError:
+    if Path(filename).suffix:
+        try:
+            input_type = validate_file_extension(filename)
+        except ValueError as exc:
+            _raise_unsupported_file_type(str(exc))
+    else:
         input_type = "txt"
 
     # 2. Validate file content (UTF-8, not binary, not PDF-disguised-as-text).
